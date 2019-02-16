@@ -1,6 +1,6 @@
 {
   "name": "react-lighthouse-viewer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A React component used for rendering Lighthouse JSON reports.",
   "main": "index.js",
   "scripts": {
@@ -23,10 +23,6 @@
   ],
   "author": "Naod Yeheyes <naodya@gmail.com>",
   "license": "ISC",
-  "peerDependencies": {
-    "react": "^16.8.2",
-    "react-dom": "^16.8.2"
-  },
   "bugs": {
     "url": "https://github.com/blencorp/react-lighthouse-viewer/issues"
   },
