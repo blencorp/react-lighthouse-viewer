@@ -1,6 +1,6 @@
 {
   "name": "react-lighthouse-viewer",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A React component used for rendering Lighthouse JSON reports.",
   "main": "dist/index.js",
   "scripts": {
