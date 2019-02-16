@@ -1,8 +1,8 @@
 {
   "name": "react-lighthouse-viewer",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A React component used for rendering Lighthouse JSON reports.",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack-dev-server --mode development",
