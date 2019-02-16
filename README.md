@@ -31,13 +31,13 @@ render(<App />, document.getElementById("root"));
 npm install -g lighthouse
 ```
 
-**Run CLI**: `lighthouse https://blencorp.com --output=json --output-path=./website-report.json`
+**Run CLI**: `lighthouse https://blencorp.com --output=json --output-path=./report.json`
 
 By default, Lighthouse writes the report to an HTML file. You can control the output format by passing flags.
 
 ### CLI options
 
-```
+```sh
 $ lighthouse --help
 
 lighthouse <url>
@@ -110,3 +110,11 @@ Examples:
 
 For more information on Lighthouse, see https://developers.google.com/web/tools/lighthouse/.
 ```
+
+## Cool Guide by Brad Stiff
+
+**A guide to building a React component with webpack 4, publishing to npm, and deploying the demo to GitHub Pages** [Read more](https://medium.com/dailyjs/building-a-react-component-with-webpack-publish-to-npm-deploy-to-github-guide-6927f60b3220) :+1:
+
+---
+
+Hacked with ❤️ by [BLEN](https://blencorp.com) Corp in Washington, DC.

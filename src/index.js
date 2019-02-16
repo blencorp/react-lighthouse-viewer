@@ -49,12 +49,16 @@ class ReportViewer extends Component {
     // is in the document.
     const features = new ReportUIFeatures(dom);
     features.initFeatures(json);
-  };
+  }
 
   render() {
     return (
       <div className="lh-root lh-vars">
-        <Template />
+        <div>
+          <Template />
+        </div>
+        <main>{/* report populated here */}</main>
+        <div id="lh-log" />
       </div>
     );
   }

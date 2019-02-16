@@ -1,4 +1,4 @@
-
+# .npmignore 
 src
 examples
 .babelrc
