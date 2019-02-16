@@ -13,7 +13,7 @@ yarn add react-lighthouse-viewer
 ```Javascript
 import React from 'react';
 import { render } from 'react-dom';
-import ReportViewer from '../../src';
+import ReportViewer from 'react-lighthouse-viewer';
 
 import jsonReport from './report.json';
 
