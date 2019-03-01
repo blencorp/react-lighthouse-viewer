@@ -41,7 +41,7 @@ class ReportViewer extends Component {
     const dom = new DOM(document);
     const renderer = new ReportRenderer(dom);
 
-    const container = document.querySelector("main");
+    const container = document.querySelector("main.react-lighthouse-viewer");
 
     renderer.renderReport(json, container);
 
@@ -57,7 +57,9 @@ class ReportViewer extends Component {
         <div>
           <Template />
         </div>
-        <main>{/* report populated here */}</main>
+        <main className="react-lighthouse-viewer">
+          {/* report populated here */}
+        </main>
         <div id="lh-log" />
       </div>
     );
