@@ -39,10 +39,10 @@ class Logger {
     this._id && clearTimeout(this._id);
 
     this.el.textContent = msg;
-    this.el.classList.add("show");
+    this.el.classList.add('show');
     if (autoHide) {
       this._id = setTimeout(_ => {
-        this.el.classList.remove("show");
+        this.el.classList.remove('show');
       }, 7000);
     }
   }
@@ -51,7 +51,7 @@ class Logger {
    * @param {string} msg
    */
   warn(msg) {
-    this.log("Warning: " + msg);
+    this.log('Warning: ' + msg);
   }
 
   /**
@@ -72,7 +72,7 @@ class Logger {
    */
   hide() {
     this._id && clearTimeout(this._id);
-    this.el.classList.remove("show");
+    this.el.classList.remove('show');
   }
 }
 
