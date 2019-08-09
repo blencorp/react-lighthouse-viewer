@@ -1,12 +1,12 @@
 {
   "name": "react-lighthouse-viewer",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "description": "A React component used for rendering Lighthouse JSON reports.",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack-dev-server --mode development",
-    "transpile": "babel src -d dist --copy-files",
+    "transpile": "./node_modules/.bin/babel src -d dist --copy-files",
     "prepublishOnly": "npm run transpile",
     "build": "webpack --mode production",
     "deploy": "gh-pages -d example/dist",
@@ -28,10 +28,10 @@
   },
   "homepage": "https://github.com/blencorp/react-lighthouse-viewer#readme",
   "devDependencies": {
+    "@babel/cli": "^7.5.5",
     "@babel/core": "^7.5.5",
     "@babel/preset-env": "^7.5.5",
     "@babel/preset-react": "^7.0.0",
-    "babel-cli": "^6.26.0",
     "babel-loader": "^8.0.6",
     "babel-preset-env": "^1.7.0",
     "css-loader": "^3.2.0",
