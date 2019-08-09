@@ -1,3 +1,5 @@
+import Util from "./util";
+
 /* eslint-disable no-restricted-globals */
 /**
  * @license
@@ -16,10 +18,9 @@
  * limitations under the License.
  */
 
+/* globals URL self Util */
 
-/* globals URL self */
-
-/** @typedef {HTMLElementTagNameMap & {[id: string]: HTMLElement}} HTMLElmentByTagName */
+/** @typedef {HTMLElementTagNameMap & {[id: string]: HTMLElement}} HTMLElementByTagName */
 
 class DOM {
   /**
@@ -28,6 +29,8 @@ class DOM {
   constructor(document) {
     /** @type {Document} */
     this._document = document;
+    /** @type {string} */
+    this._lighthouseChannel = 'unknown';
   }
 
   /**
@@ -37,7 +40,7 @@ class DOM {
    * @param {Object<string, (string|undefined)>=} attrs Attribute key/val pairs.
    *     Note: if an attribute key has an undefined value, this method does not
    *     set the attribute on the node.
-   * @return {HTMLElmentByTagName[T]}
+   * @return {HTMLElementByTagName[T]}
    */
   createElement(name, className, attrs = {}) {
     const element = this._document.createElement(name);
@@ -46,7 +49,7 @@ class DOM {
     }
     Object.keys(attrs).forEach(key => {
       const value = attrs[key];
-      if (typeof value !== "undefined") {
+      if (typeof value !== 'undefined') {
         element.setAttribute(key, value);
       }
     });
@@ -68,7 +71,7 @@ class DOM {
    * @param {Object<string, (string|undefined)>=} attrs Attribute key/val pairs.
    *     Note: if an attribute key has an undefined value, this method does not
    *     set the attribute on the node.
-   * @return {HTMLElmentByTagName[T]}
+   * @return {HTMLElementByTagName[T]}
    */
   createChildOf(parentElem, elementName, className, attrs) {
     const element = this.createElement(elementName, className, attrs);
@@ -83,9 +86,7 @@ class DOM {
    * @throws {Error}
    */
   cloneTemplate(selector, context) {
-    const template = /** @type {?HTMLTemplateElement} */ (context.querySelector(
-      selector
-    ));
+    const template = /** @type {?HTMLTemplateElement} */ (context.querySelector(selector));
     if (!template) {
       throw new Error(`Template not found: template${selector}`);
     }
@@ -94,10 +95,10 @@ class DOM {
 
     // Prevent duplicate styles in the DOM. After a template has been stamped
     // for the first time, remove the clone's styles so they're not re-added.
-    if (template.hasAttribute("data-stamped")) {
-      this.findAll("style", clone).forEach(style => style.remove());
+    if (template.hasAttribute('data-stamped')) {
+      this.findAll('style', clone).forEach(style => style.remove());
     }
-    template.setAttribute("data-stamped", "true");
+    template.setAttribute('data-stamped', 'true');
 
     return clone;
   }
@@ -106,8 +107,8 @@ class DOM {
    * Resets the "stamped" state of the templates.
    */
   resetTemplates() {
-    this.findAll("template[data-stamped]", this._document).forEach(t => {
-      t.removeAttribute("data-stamped");
+    this.findAll('template[data-stamped]', this._document).forEach(t => {
+      t.removeAttribute('data-stamped');
     });
   }
 
@@ -116,24 +117,49 @@ class DOM {
    * @return {Element}
    */
   convertMarkdownLinkSnippets(text) {
-    const element = this.createElement("span");
+    const element = this.createElement('span');
 
-    // Split on markdown links (e.g. [some link](https://...)).
-    const parts = text.split(/\[([^\]]*?)\]\((https?:\/\/.*?)\)/g);
+    for (const segment of Util.splitMarkdownLink(text)) {
+      if (!segment.isLink) {
+        // Plain text segment.
+        element.appendChild(this._document.createTextNode(segment.text));
+        continue;
+      }
 
-    while (parts.length) {
-      // Pop off the same number of elements as there are capture groups.
-      const [preambleText, linkText, linkHref] = parts.splice(0, 3);
-      element.appendChild(this._document.createTextNode(preambleText));
+      // Otherwise, append any links found.
+      const url = new URL(segment.linkHref);
 
-      // Append link if there are any.
-      if (linkText && linkHref) {
-        const a = this.createElement("a");
-        a.rel = "noopener";
-        a.target = "_blank";
-        a.textContent = linkText;
-        a.href = new URL(linkHref).href;
-        element.appendChild(a);
+      const DEVELOPERS_GOOGLE_ORIGIN = 'https://developers.google.com';
+      if (url.origin === DEVELOPERS_GOOGLE_ORIGIN) {
+        url.searchParams.set('utm_source', 'lighthouse');
+        url.searchParams.set('utm_medium', this._lighthouseChannel);
+      }
+
+      const a = this.createElement('a');
+      a.rel = 'noopener';
+      a.target = '_blank';
+      a.textContent = segment.text;
+      a.href = url.href;
+      element.appendChild(a);
+    }
+
+    return element;
+  }
+
+  /**
+   * @param {string} markdownText
+   * @return {Element}
+   */
+  convertMarkdownCodeSnippets(markdownText) {
+    const element = this.createElement('span');
+
+    for (const segment of Util.splitMarkdownCodeSpans(markdownText)) {
+      if (segment.isCode) {
+        const pre = this.createElement('code');
+        pre.textContent = segment.text;
+        element.appendChild(pre);
+      } else {
+        element.appendChild(this._document.createTextNode(segment.text));
       }
     }
 
@@ -141,25 +167,11 @@ class DOM {
   }
 
   /**
-   * @param {string} text
-   * @return {Element}
+   * The channel to use for UTM data when rendering links to the documentation.
+   * @param {string} lighthouseChannel
    */
-  convertMarkdownCodeSnippets(text) {
-    const element = this.createElement("span");
-
-    const parts = text.split(/`(.*?)`/g); // Split on markdown code slashes
-    while (parts.length) {
-      // Pop off the same number of elements as there are capture groups.
-      const [preambleText, codeText] = parts.splice(0, 2);
-      element.appendChild(this._document.createTextNode(preambleText));
-      if (codeText) {
-        const pre = this.createElement("code");
-        pre.textContent = codeText;
-        element.appendChild(pre);
-      }
-    }
-
-    return element;
+  setLighthouseChannel(lighthouseChannel) {
+    this._lighthouseChannel = lighthouseChannel;
   }
 
   /**
@@ -174,7 +186,7 @@ class DOM {
    * @return {boolean}
    */
   isDevTools() {
-    return !!this._document.querySelector(".lh-devtools");
+    return !!this._document.querySelector('.lh-devtools');
   }
 
   /**
@@ -204,10 +216,10 @@ class DOM {
   }
 }
 
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = DOM;
-} else {
-  self.DOM = DOM;
-}
+// if (typeof module !== 'undefined' && module.exports) {
+//   module.exports = DOM;
+// } else {
+//   self.DOM = DOM;
+// }
 
 export default DOM;

@@ -1,5 +1,6 @@
 // eslint-disable-next-line
 import DOM from "./dom.js";
+import Util from "./util";
 
 /**
  * @fileoverview
@@ -56,15 +57,24 @@ function getUrlConstructor() {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+'use strict';
+
+/* eslint-env browser */
 
 /**
- * @fileoverview Adds export button, print, and other dynamic functionality to
+ * @fileoverview Adds tools button, print, and other dynamic functionality to
  * the report.
  */
 
-/* globals self URL Blob CustomEvent getFilenamePrefix window */
+/* globals getFilenamePrefix Util */
 
-/** @typedef {import('./dom.js')} DOM */
+/**
+ * @param {HTMLTableElement} tableEl
+ * @return {Array<HTMLTableRowElement>}
+ */
+function getTableRows(tableEl) {
+  return Array.from(tableEl.tBodies[0].rows);
+}
 
 class ReportUIFeatures {
   /**
@@ -77,63 +87,138 @@ class ReportUIFeatures {
     this._dom = dom;
     /** @type {Document} */
     this._document = this._dom.document();
+    /** @type {ParentNode} */
+    this._templateContext = this._dom.document();
     /** @type {boolean} */
     this._copyAttempt = false;
     /** @type {HTMLElement} */
-    this.exportButton; // eslint-disable-line no-unused-expressions
+    this.toolsButton; // eslint-disable-line no-unused-expressions
     /** @type {HTMLElement} */
-    this.headerSticky; // eslint-disable-line no-unused-expressions
+    this.topbarEl; // eslint-disable-line no-unused-expressions
     /** @type {HTMLElement} */
-    this.headerBackground; // eslint-disable-line no-unused-expressions
+    this.scoreScaleEl; // eslint-disable-line no-unused-expressions
     /** @type {HTMLElement} */
-    this.headerContent; // eslint-disable-line no-unused-expressions
+    this.stickyHeaderEl; // eslint-disable-line no-unused-expressions
     /** @type {HTMLElement} */
-    this.lighthouseIcon; // eslint-disable-line no-unused-expressions
-    /** @type {!HTMLElement} */
-    this.scoresWrapperBg; // eslint-disable-line no-unused-expressions
-    /** @type {!HTMLElement} */
-    this.productInfo; // eslint-disable-line no-unused-expressions
-    /** @type {HTMLElement} */
-    this.toolbar; // eslint-disable-line no-unused-expressions
-    /** @type {HTMLElement} */
-    this.toolbarMetadata; // eslint-disable-line no-unused-expressions
-    /** @type {HTMLElement} */
-    this.env; // eslint-disable-line no-unused-expressions
-    /** @type {number} */
-    this.headerOverlap = 0;
-    /** @type {number} */
-    this.headerHeight = 0;
-    /** @type {number} */
-    this.latestKnownScrollY = 0;
-    /** @type {boolean} */
-    this.isAnimatingHeader = false;
+    this.highlightEl; // eslint-disable-line no-unused-expressions
 
     this.onMediaQueryChange = this.onMediaQueryChange.bind(this);
     this.onCopy = this.onCopy.bind(this);
-    this.onExportButtonClick = this.onExportButtonClick.bind(this);
-    this.onExport = this.onExport.bind(this);
+    this.onToolsButtonClick = this.onToolsButtonClick.bind(this);
+    this.onToolAction = this.onToolAction.bind(this);
     this.onKeyDown = this.onKeyDown.bind(this);
-    this.printShortCutDetect = this.printShortCutDetect.bind(this);
-    this.onScroll = this.onScroll.bind(this);
+    this.onKeyUp = this.onKeyUp.bind(this);
     this.onChevronClick = this.onChevronClick.bind(this);
+    this.collapseAllDetails = this.collapseAllDetails.bind(this);
+    this.expandAllDetails = this.expandAllDetails.bind(this);
+    this._toggleDarkTheme = this._toggleDarkTheme.bind(this);
+    this._updateStickyHeaderOnScroll = this._updateStickyHeaderOnScroll.bind(this);
   }
 
   /**
-   * Adds export button, print, and other functionality to the report. The method
+   * Adds tools button, print, and other functionality to the report. The method
    * should be called whenever the report needs to be re-rendered.
    * @param {LH.Result} report
    */
   initFeatures(report) {
-    if (this._dom.isDevTools()) return;
-
     this.json = report;
+
     this._setupMediaQueryListeners();
-    this._setupExportButton();
+    this._setupToolsButton();
+    this._setupThirdPartyFilter();
     this._setUpCollapseDetailsAfterPrinting();
-    this._setupHeaderAnimation();
     this._resetUIState();
-    this._document.addEventListener("keydown", this.printShortCutDetect);
-    this._document.addEventListener("copy", this.onCopy);
+    this._document.addEventListener('keyup', this.onKeyUp);
+    this._document.addEventListener('copy', this.onCopy);
+
+    const topbarLogo = this._dom.find('.lh-topbar__logo', this._document);
+    topbarLogo.addEventListener('click', () => this._toggleDarkTheme());
+
+    let turnOffTheLights = false;
+    // Do not query the system preferences for DevTools - DevTools should only apply dark theme
+    // if dark is selected in the settings panel.
+    if (!this._dom.isDevTools() && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      turnOffTheLights = true;
+    }
+
+    // Fireworks.
+    const scoresAll100 = Object.values(report.categories).every(cat => cat.score === 1);
+    const hasAllCoreCategories =
+      Object.keys(report.categories).filter(id => !Util.isPluginCategory(id)).length >= 5;
+    if (scoresAll100 && hasAllCoreCategories) {
+      turnOffTheLights = true;
+      this._enableFireworks();
+    }
+
+    if (turnOffTheLights) {
+      this._toggleDarkTheme(true);
+    }
+
+    // There is only a sticky header when at least 2 categories are present.
+    if (Object.keys(this.json.categories).length >= 2) {
+      this._setupStickyHeaderElements();
+      const containerEl = this._dom.find('.lh-container', this._document);
+      const elToAddScrollListener = this._getScrollParent(containerEl);
+      elToAddScrollListener.addEventListener('scroll', this._updateStickyHeaderOnScroll);
+
+      // Use ResizeObserver where available.
+      // TODO: there is an issue with incorrect position numbers and, as a result, performance
+      // issues due to layout thrashing.
+      // See https://github.com/GoogleChrome/lighthouse/pull/9023/files#r288822287 for details.
+      // For now, limit to DevTools.
+      if (this._dom.isDevTools()) {
+        const resizeObserver = new window.ResizeObserver(this._updateStickyHeaderOnScroll);
+        resizeObserver.observe(containerEl);
+      } else {
+        window.addEventListener('resize', this._updateStickyHeaderOnScroll);
+      }
+    }
+
+    // Show the metric descriptions by default when there is an error.
+    const hasMetricError = report.categories.performance && report.categories.performance.auditRefs
+      .some(audit => Boolean(audit.group === 'metrics' && report.audits[audit.id].errorMessage));
+    if (hasMetricError) {
+      const toggleInputEl = /** @type {HTMLInputElement} */ (
+        this._dom.find('.lh-metrics-toggle__input', this._document));
+      toggleInputEl.checked = true;
+    }
+  }
+
+  /**
+   * Define a custom element for <templates> to be extracted from. For example:
+   *     this.setTemplateContext(new DOMParser().parseFromString(htmlStr, 'text/html'))
+   * @param {ParentNode} context
+   */
+  setTemplateContext(context) {
+    this._templateContext = context;
+  }
+
+  /**
+   * Finds the first scrollable ancestor of `element`. Falls back to the document.
+   * @param {HTMLElement} element
+   * @return {Node}
+   */
+  _getScrollParent(element) {
+    const {overflowY} = window.getComputedStyle(element);
+    const isScrollable = overflowY !== 'visible' && overflowY !== 'hidden';
+
+    if (isScrollable) {
+      return element;
+    }
+
+    if (element.parentElement) {
+      return this._getScrollParent(element.parentElement);
+    }
+
+    return document;
+  }
+
+  _enableFireworks() {
+    const scoresContainer = this._dom.find('.lh-scores-container', this._document);
+    scoresContainer.classList.add('score100');
+    scoresContainer.addEventListener('click', _ => {
+      scoresContainer.classList.toggle('fireworks-paused');
+    });
   }
 
   /**
@@ -143,12 +228,12 @@ class ReportUIFeatures {
    * @param {*=} detail Custom data to include.
    */
   _fireEventOn(name, target = this._document, detail) {
-    const event = new CustomEvent(name, detail ? { detail } : undefined);
+    const event = new CustomEvent(name, detail ? {detail} : undefined);
     target.dispatchEvent(event);
   }
 
   _setupMediaQueryListeners() {
-    const mediaQuery = self.matchMedia("(max-width: 500px)");
+    const mediaQuery = self.matchMedia('(max-width: 500px)');
     mediaQuery.addListener(this.onMediaQueryChange);
     // Ensure the handler is called on init
     this.onMediaQueryChange(mediaQuery);
@@ -159,44 +244,126 @@ class ReportUIFeatures {
    * @param {MediaQueryList|MediaQueryListEvent} mql
    */
   onMediaQueryChange(mql) {
-    const root = this._dom.find(".lh-root", this._document);
-    root.classList.toggle("lh-narrow", mql.matches);
+    const root = this._dom.find('.lh-root', this._document);
+    root.classList.toggle('lh-narrow', mql.matches);
   }
 
-  _setupExportButton() {
-    this.exportButton = this._dom.find(".lh-export__button", this._document);
-    this.exportButton.addEventListener("click", this.onExportButtonClick);
+  _setupToolsButton() {
+    this.toolsButton = this._dom.find('.lh-tools__button', this._document);
+    this.toolsButton.addEventListener('click', this.onToolsButtonClick);
 
-    const dropdown = this._dom.find(".lh-export__dropdown", this._document);
-    dropdown.addEventListener("click", this.onExport);
+    const dropdown = this._dom.find('.lh-tools__dropdown', this._document);
+    dropdown.addEventListener('click', this.onToolAction);
   }
 
-  _setupHeaderAnimation() {
-    const scoresWrapper = this._dom.find(".lh-scores-wrapper", this._document);
-    const computedMarginTop = window.getComputedStyle(scoresWrapper).marginTop;
-    this.headerOverlap = parseFloat(computedMarginTop || "0");
-    this.headerSticky = this._dom.find(".lh-header-sticky", this._document);
-    this.headerBackground = this._dom.find(".lh-header-bg", this._document);
-    this.headerContent = this._dom.find(".lh-header", this._document);
-    this.lighthouseIcon = this._dom.find(".lh-lighthouse", this._document);
-    this.scoresWrapperBg = this._dom.find(
-      ".lh-scores-wrapper__background",
-      this._document
-    );
-    this.productInfo = this._dom.find(".lh-product-info", this._document);
-    this.toolbar = this._dom.find(".lh-toolbar", this._document);
-    this.toolbarMetadata = this._dom.find(
-      ".lh-toolbar__metadata",
-      this._document
-    );
-    const computedHeight = window.getComputedStyle(this.headerBackground)
-      .height;
-    this.headerHeight = parseFloat(computedHeight || "0");
+  _setupThirdPartyFilter() {
+    // Some audits should not display the third party filter option.
+    const thirdPartyFilterAuditExclusions = [
+      // This audit deals explicitly with third party resources.
+      'uses-rel-preconnect',
+    ];
 
-    this._document.addEventListener("scroll", this.onScroll, { passive: true });
+    // Get all tables with a text url column.
+    /** @type {Array<HTMLTableElement>} */
+    const tables = Array.from(this._document.querySelectorAll('.lh-table'));
+    const tablesWithUrls = tables
+      .filter(el => el.querySelector('td.lh-table-column--url'))
+      .filter(el => {
+        const containingAudit = el.closest('.lh-audit');
+        if (!containingAudit) throw new Error('.lh-table not within audit');
+        return !thirdPartyFilterAuditExclusions.includes(containingAudit.id);
+      });
 
-    const toolbarChevron = this._dom.find(".lh-toggle-arrow", this.toolbar);
-    toolbarChevron.addEventListener("click", this.onChevronClick);
+    tablesWithUrls.forEach((tableEl, index) => {
+      const urlItems = this._getUrlItems(tableEl);
+      const thirdPartyRows = this._getThirdPartyRows(tableEl, urlItems, this.json.finalUrl);
+
+      // create input box
+      const filterTemplate = this._dom.cloneTemplate('#tmpl-lh-3p-filter', this._templateContext);
+      const filterInput =
+        /** @type {HTMLInputElement} */ (this._dom.find('input', filterTemplate));
+      const id = `lh-3p-filter-label--${index}`;
+
+      filterInput.id = id;
+      filterInput.addEventListener('change', e => {
+        // Remove rows from the dom and keep track of them to re-add on uncheck.
+        // Why removing instead of hiding? To keep nth-child(even) background-colors working.
+        if (e.target instanceof HTMLInputElement && !e.target.checked) {
+          for (const row of thirdPartyRows.values()) {
+            row.remove();
+          }
+        } else {
+          // Add row elements back to original positions.
+          for (const [position, row] of thirdPartyRows.entries()) {
+            const childrenArr = getTableRows(tableEl);
+            tableEl.tBodies[0].insertBefore(row, childrenArr[position]);
+          }
+        }
+      });
+
+      this._dom.find('label', filterTemplate).setAttribute('for', id);
+      this._dom.find('.lh-3p-filter-count', filterTemplate).textContent =
+          `${thirdPartyRows.size}`;
+      this._dom.find('.lh-3p-ui-string', filterTemplate).textContent =
+          Util.UIStrings.thirdPartyResourcesLabel;
+
+      // If all or none of the rows are 3rd party, disable the checkbox.
+      if (thirdPartyRows.size === urlItems.length || !thirdPartyRows.size) {
+        filterInput.disabled = true;
+        filterInput.checked = thirdPartyRows.size === urlItems.length;
+      }
+
+      // Finally, add checkbox to the DOM.
+      if (!tableEl.parentNode) return; // Keep tsc happy.
+      tableEl.parentNode.insertBefore(filterTemplate, tableEl);
+    });
+  }
+
+  /**
+   * From a table with URL entries, finds the rows containing third-party URLs
+   * and returns a Map of those rows, mapping from row index to row Element.
+   * @param {HTMLTableElement} el
+   * @param {string} finalUrl
+   * @param {Array<HTMLElement>} urlItems
+   * @return {Map<number, HTMLTableRowElement>}
+   */
+  _getThirdPartyRows(el, urlItems, finalUrl) {
+    const finalUrlRootDomain = Util.getRootDomain(finalUrl);
+
+    /** @type {Map<number, HTMLTableRowElement>} */
+    const thirdPartyRows = new Map();
+    for (const urlItem of urlItems) {
+      const datasetUrl = urlItem.dataset.url;
+      if (!datasetUrl) continue;
+      const isThirdParty = Util.getRootDomain(datasetUrl) !== finalUrlRootDomain;
+      if (!isThirdParty) continue;
+
+      const urlRowEl = urlItem.closest('tr');
+      if (urlRowEl) {
+        const rowPosition = getTableRows(el).indexOf(urlRowEl);
+        thirdPartyRows.set(rowPosition, urlRowEl);
+      }
+    }
+
+    return thirdPartyRows;
+  }
+
+  /**
+   * From a table, finds and returns URL items.
+   * @param {HTMLTableElement} tableEl
+   * @return {Array<HTMLElement>}
+   */
+  _getUrlItems(tableEl) {
+    return this._dom.findAll('.lh-text__url', tableEl);
+  }
+
+  _setupStickyHeaderElements() {
+    this.topbarEl = this._dom.find('.lh-topbar', this._document);
+    this.scoreScaleEl = this._dom.find('.lh-scorescale', this._document);
+    this.stickyHeaderEl = this._dom.find('.lh-sticky-header', this._document);
+
+    // Highlighter will be absolutely positioned at first gauge, then transformed on scroll.
+    this.highlightEl = this._dom.createChildOf(this.stickyHeaderEl, 'div', 'lh-highlighter');
   }
 
   /**
@@ -205,14 +372,13 @@ class ReportUIFeatures {
    */
   onCopy(e) {
     // Only handle copy button presses (e.g. ignore the user copying page text).
-    if (this._copyAttempt) {
+    if (this._copyAttempt && e.clipboardData) {
       // We want to write our own data to the clipboard, not the user's text selection.
       e.preventDefault();
-      e.clipboardData.setData("text/plain", JSON.stringify(this.json, null, 2));
+      e.clipboardData.setData('text/plain', JSON.stringify(this.json, null, 2));
 
-      this._fireEventOn("lh-log", this._document, {
-        cmd: "log",
-        msg: "Report JSON copied to clipboard"
+      this._fireEventOn('lh-log', this._document, {
+        cmd: 'log', msg: 'Report JSON copied to clipboard',
       });
     }
 
@@ -223,128 +389,53 @@ class ReportUIFeatures {
    * Copies the report JSON to the clipboard (if supported by the browser).
    */
   onCopyButtonClick() {
-    this._fireEventOn("lh-analytics", this._document, {
-      cmd: "send",
-      fields: { hitType: "event", eventCategory: "report", eventAction: "copy" }
+    this._fireEventOn('lh-analytics', this._document, {
+      cmd: 'send',
+      fields: {hitType: 'event', eventCategory: 'report', eventAction: 'copy'},
     });
 
     try {
-      if (this._document.queryCommandSupported("copy")) {
+      if (this._document.queryCommandSupported('copy')) {
         this._copyAttempt = true;
 
         // Note: In Safari 10.0.1, execCommand('copy') returns true if there's
         // a valid text selection on the page. See http://caniuse.com/#feat=clipboard.
-        if (!this._document.execCommand("copy")) {
+        if (!this._document.execCommand('copy')) {
           this._copyAttempt = false; // Prevent event handler from seeing this as a copy attempt.
 
-          this._fireEventOn("lh-log", this._document, {
-            cmd: "warn",
-            msg: "Your browser does not support copy to clipboard."
+          this._fireEventOn('lh-log', this._document, {
+            cmd: 'warn', msg: 'Your browser does not support copy to clipboard.',
           });
         }
       }
     } catch (/** @type {Error} */ e) {
       this._copyAttempt = false;
-      this._fireEventOn("lh-log", this._document, {
-        cmd: "log",
-        msg: e.message
-      });
+      this._fireEventOn('lh-log', this._document, {cmd: 'log', msg: e.message});
     }
-  }
-
-  onScroll() {
-    this.latestKnownScrollY = window.scrollY;
-
-    if (!this.isAnimatingHeader) {
-      window.requestAnimationFrame(this.animateHeader.bind(this));
-    }
-    this.isAnimatingHeader = true;
   }
 
   onChevronClick() {
-    const toggle = this._dom.find(
-      ".lh-config__settings-toggle",
-      this._document
-    );
+    const toggle = this._dom.find('.lh-config__settings-toggle', this._document);
 
-    if (toggle.hasAttribute("open")) {
-      toggle.removeAttribute("open");
+    if (toggle.hasAttribute('open')) {
+      toggle.removeAttribute('open');
     } else {
-      toggle.setAttribute("open", "true");
+      toggle.setAttribute('open', 'true');
     }
   }
 
-  animateHeader() {
-    const collapsedHeaderHeight = 50;
-    const heightDiff =
-      this.headerHeight - collapsedHeaderHeight + this.headerOverlap;
-    const scrollPct = Math.max(
-      0,
-      Math.min(
-        1,
-        this.latestKnownScrollY / (this.headerHeight - collapsedHeaderHeight)
-      )
-    );
-
-    const scoresContainer = /** @type {HTMLElement} */ (this.scoresWrapperBg
-      .parentElement);
-
-    this.headerSticky.style.transform = `translateY(${heightDiff *
-      scrollPct *
-      -1}px)`;
-    this.headerBackground.style.transform = `translateY(${scrollPct *
-      this.headerOverlap}px)`;
-    this.lighthouseIcon.style.transform =
-      `translate3d(0,` +
-      `-${scrollPct * this.headerOverlap * -1}px, 0) scale(${1 - scrollPct})`;
-    this.headerContent.style.opacity = (1 - scrollPct).toString();
-
-    // Switch up the score background & shadows
-    this.scoresWrapperBg.style.opacity = (1 - scrollPct).toString();
-    this.scoresWrapperBg.style.transform = `scaleY(${1 - scrollPct * 0.2})`;
-    const scoreShadow = this._dom.find(
-      ".lh-scores-wrapper__shadow",
-      scoresContainer
-    );
-    scoreShadow.style.opacity = scrollPct.toString();
-    scoreShadow.style.transform = `scaleY(${1 - scrollPct * 0.2})`;
-
-    // Fade & move the scorescale
-    try {
-      const scoreScalePositionDelta = 32;
-      const scoreScale = this._dom.find(".lh-scorescale", scoresContainer);
-      scoreScale.style.opacity = `${1 - scrollPct}`;
-      scoreScale.style.transform = `translateY(${scrollPct *
-        -scoreScalePositionDelta}px)`;
-    } catch (e) {}
-
-    // Move the toolbar & export
-    this.toolbar.style.transform = `translateY(${heightDiff * scrollPct}px)`;
-    const exportParent = this.exportButton.parentElement;
-    if (exportParent) {
-      exportParent.style.transform = `translateY(${heightDiff * scrollPct}px)`;
-    }
-    this.exportButton.style.transform = `scale(${1 - 0.2 * scrollPct})`;
-    // Start showing the productinfo when we are at the 50% mark of our animation
-    const opacity = scrollPct < 0.5 ? 0 : (scrollPct - 0.5) * 2;
-    this.productInfo.style.opacity = this.toolbarMetadata.style.opacity = opacity.toString();
-
-    this.isAnimatingHeader = false;
-  }
-
-  closeExportDropdown() {
-    this.exportButton.classList.remove("active");
+  closeToolsDropdown() {
+    this.toolsButton.classList.remove('active');
   }
 
   /**
-   * Click handler for export button.
+   * Click handler for tools button.
    * @param {Event} e
    */
-  onExportButtonClick(e) {
+  onToolsButtonClick(e) {
     e.preventDefault();
-    const el = /** @type {Element} */ (e.target);
-    el.classList.toggle("active");
-    this._document.addEventListener("keydown", this.onKeyDown);
+    this.toolsButton.classList.toggle('active');
+    this._document.addEventListener('keydown', this.onKeyDown);
   }
 
   /**
@@ -353,67 +444,74 @@ class ReportUIFeatures {
    * be in their closed state (not opened) and the templates should be unstamped.
    */
   _resetUIState() {
-    this.closeExportDropdown();
+    this.closeToolsDropdown();
     this._dom.resetTemplates();
   }
 
   /**
-   * Handler for "export as" button.
+   * Handler for tool button.
    * @param {Event} e
    */
-  onExport(e) {
+  onToolAction(e) {
     e.preventDefault();
 
     const el = /** @type {?Element} */ (e.target);
 
-    if (!el || !el.hasAttribute("data-action")) {
+    if (!el || !el.hasAttribute('data-action')) {
       return;
     }
 
-    switch (el.getAttribute("data-action")) {
-      case "copy":
+    switch (el.getAttribute('data-action')) {
+      case 'copy':
         this.onCopyButtonClick();
         break;
-      case "print-summary":
+      case 'print-summary':
         this.collapseAllDetails();
-        this.closeExportDropdown();
-        self.print();
+        this.closeToolsDropdown();
+        this._print();
         break;
-      case "print-expanded":
+      case 'print-expanded':
         this.expandAllDetails();
-        this.closeExportDropdown();
-        self.print();
+        this.closeToolsDropdown();
+        this._print();
         break;
-      case "save-json": {
+      case 'save-json': {
         const jsonStr = JSON.stringify(this.json, null, 2);
-        this._saveFile(new Blob([jsonStr], { type: "application/json" }));
+        this._saveFile(new Blob([jsonStr], {type: 'application/json'}));
         break;
       }
-      case "save-html": {
+      case 'save-html': {
         const htmlStr = this.getReportHtml();
         try {
-          this._saveFile(new Blob([htmlStr], { type: "text/html" }));
+          this._saveFile(new Blob([htmlStr], {type: 'text/html'}));
         } catch (/** @type {Error} */ e) {
-          this._fireEventOn("lh-log", this._document, {
-            cmd: "error",
-            msg: "Could not export as HTML. " + e.message
+          this._fireEventOn('lh-log', this._document, {
+            cmd: 'error', msg: 'Could not export as HTML. ' + e.message,
           });
         }
         break;
       }
-      case "open-viewer": {
-        const viewerPath = "/lighthouse/viewer/";
+      case 'open-viewer': {
+        const viewerPath = '/lighthouse/viewer/';
         ReportUIFeatures.openTabAndSendJsonReport(this.json, viewerPath);
         break;
       }
-      case "save-gist": {
+      case 'save-gist': {
         this.saveAsGist();
+        break;
+      }
+      case 'toggle-dark': {
+        this._toggleDarkTheme();
         break;
       }
     }
 
-    this.closeExportDropdown();
-    this._document.removeEventListener("keydown", this.onKeyDown);
+    this.closeToolsDropdown();
+    this._document.removeEventListener('keydown', this.onKeyDown);
+  }
+
+  _print() {
+    self.print();
   }
 
   /**
@@ -421,9 +519,19 @@ class ReportUIFeatures {
    * @param {KeyboardEvent} e
    */
   onKeyDown(e) {
-    if (e.keyCode === 27) {
-      // ESC
-      this.closeExportDropdown();
+    if (e.keyCode === 27) { // ESC
+      this.closeToolsDropdown();
+    }
+  }
+
+  /**
+   * Keyup handler for the document.
+   * @param {KeyboardEvent} e
+   */
+  onKeyUp(e) {
+    // Ctrl+P - Expands audit details when user prints via keyboard shortcut.
+    if ((e.ctrlKey || e.metaKey) && e.keyCode === 80) {
+      this.closeToolsDropdown();
     }
   }
 
@@ -435,19 +543,19 @@ class ReportUIFeatures {
    * @protected
    */
   static openTabAndSendJsonReport(reportJson, viewerPath) {
-    const VIEWER_ORIGIN = "https://googlechrome.github.io";
+    const VIEWER_ORIGIN = 'https://googlechrome.github.io';
     // Chrome doesn't allow us to immediately postMessage to a popup right
     // after it's created. Normally, we could also listen for the popup window's
     // load event, however it is cross-domain and won't fire. Instead, listen
     // for a message from the target app saying "I'm open".
     const json = reportJson;
-    window.addEventListener("message", function msgHandler(messageEvent) {
+    window.addEventListener('message', function msgHandler(messageEvent) {
       if (messageEvent.origin !== VIEWER_ORIGIN) {
         return;
       }
       if (popup && messageEvent.data.opened) {
-        popup.postMessage({ lhresults: json }, VIEWER_ORIGIN);
-        window.removeEventListener("message", msgHandler);
+        popup.postMessage({lhresults: json}, VIEWER_ORIGIN);
+        window.removeEventListener('message', msgHandler);
       }
     });
 
@@ -455,21 +563,8 @@ class ReportUIFeatures {
     // @ts-ignore - If this is a v2 LHR, use old `generatedTime`.
     const fallbackFetchTime = /** @type {string} */ (json.generatedTime);
     const fetchTime = json.fetchTime || fallbackFetchTime;
-    const windowName = `${json.lighthouseVersion}-${
-      json.requestedUrl
-    }-${fetchTime}`;
+    const windowName = `${json.lighthouseVersion}-${json.requestedUrl}-${fetchTime}`;
     const popup = window.open(`${VIEWER_ORIGIN}${viewerPath}`, windowName);
-  }
-
-  /**
-   * Expands audit details when user prints via keyboard shortcut.
-   * @param {KeyboardEvent} e
-   */
-  printShortCutDetect(e) {
-    if ((e.ctrlKey || e.metaKey) && e.keyCode === 80) {
-      // Ctrl+P
-      this.closeExportDropdown();
-    }
   }
 
   /**
@@ -479,10 +574,8 @@ class ReportUIFeatures {
    */
   expandAllDetails() {
     const details = /** @type {Array<HTMLDetailsElement>} */ (this._dom.findAll(
-      ".lh-categories details",
-      this._document
-    ));
-    details.map(detail => (detail.open = true));
+        '.lh-categories details', this._document));
+    details.map(detail => detail.open = true);
   }
 
   /**
@@ -491,10 +584,8 @@ class ReportUIFeatures {
    */
   collapseAllDetails() {
     const details = /** @type {Array<HTMLDetailsElement>} */ (this._dom.findAll(
-      ".lh-categories details",
-      this._document
-    ));
-    details.map(detail => (detail.open = false));
+        '.lh-categories details', this._document));
+    details.map(detail => detail.open = false);
   }
 
   /**
@@ -503,13 +594,13 @@ class ReportUIFeatures {
    */
   _setUpCollapseDetailsAfterPrinting() {
     // FF and IE implement these old events.
-    if ("onbeforeprint" in self) {
-      self.addEventListener("afterprint", this.collapseAllDetails);
+    if ('onbeforeprint' in self) {
+      self.addEventListener('afterprint', this.collapseAllDetails);
     } else {
       const win = /** @type {Window} */ (self);
       // Note: FF implements both window.onbeforeprint and media listeners. However,
       // it doesn't matchMedia doesn't fire when matching 'print'.
-      win.matchMedia("print").addListener(mql => {
+      win.matchMedia('print').addListener(mql => {
         if (mql.matches) {
           this.expandAllDetails();
         } else {
@@ -526,7 +617,6 @@ class ReportUIFeatures {
    */
   getReportHtml() {
     this._resetUIState();
-    // @ts-ignore - technically documentElement can be null, but that's dumb - https://dom.spec.whatwg.org/#document-element
     return this._document.documentElement.outerHTML;
   }
 
@@ -535,7 +625,7 @@ class ReportUIFeatures {
    * @protected
    */
   saveAsGist() {
-    throw new Error("Cannot save as gist from base report");
+    throw new Error('Cannot save as gist from base report');
   }
 
   /**
@@ -546,13 +636,13 @@ class ReportUIFeatures {
   _saveFile(blob) {
     const filename = getFilenamePrefix({
       finalUrl: this.json.finalUrl,
-      fetchTime: this.json.fetchTime
+      fetchTime: this.json.fetchTime,
     });
 
-    const ext = blob.type.match("json") ? ".json" : ".html";
+    const ext = blob.type.match('json') ? '.json' : '.html';
     const href = URL.createObjectURL(blob);
 
-    const a = this._dom.createElement("a");
+    const a = this._dom.createElement('a');
     a.download = `${filename}${ext}`;
     a.href = href;
     this._document.body.appendChild(a); // Firefox requires anchor to be in the DOM.
@@ -561,6 +651,47 @@ class ReportUIFeatures {
     // cleanup.
     this._document.body.removeChild(a);
     setTimeout(_ => URL.revokeObjectURL(href), 500);
+  }
+
+  /**
+   * @private
+   * @param {boolean} [force]
+   */
+  _toggleDarkTheme(force) {
+    const el = this._dom.find('.lh-vars', this._document);
+    // This seems unnecessary, but in DevTools, passing "undefined" as the second
+    // parameter acts like passing "false".
+    // https://github.com/ChromeDevTools/devtools-frontend/blob/dd6a6d4153647c2a4203c327c595692c5e0a4256/front_end/dom_extension/DOMExtension.js#L809-L819
+    if (typeof force === 'undefined') {
+      el.classList.toggle('dark');
+    } else {
+      el.classList.toggle('dark', force);
+    }
+  }
+
+  _updateStickyHeaderOnScroll() {
+    // Show sticky header when the score scale begins to go underneath the topbar.
+    const topbarBottom = this.topbarEl.getBoundingClientRect().bottom;
+    const scoreScaleTop = this.scoreScaleEl.getBoundingClientRect().top;
+    const showStickyHeader = topbarBottom >= scoreScaleTop;
+
+    // Highlight mini gauge when section is in view.
+    // In view = the last category that starts above the middle of the window.
+    const categoryEls = Array.from(this._document.querySelectorAll('.lh-category'));
+    const categoriesAboveTheMiddle =
+      categoryEls.filter(el => el.getBoundingClientRect().top - window.innerHeight / 2 < 0);
+    const highlightIndex =
+      categoriesAboveTheMiddle.length > 0 ? categoriesAboveTheMiddle.length - 1 : 0;
+
+    // Category order matches gauge order in sticky header.
+    const gaugeWrapperEls = this.stickyHeaderEl.querySelectorAll('.lh-gauge__wrapper');
+    const gaugeToHighlight = gaugeWrapperEls[highlightIndex];
+    const origin = gaugeWrapperEls[0].getBoundingClientRect().left;
+    const offset = gaugeToHighlight.getBoundingClientRect().left - origin;
+
+    // Mutate at end to avoid layout thrashing.
+    this.highlightEl.style.transform = `translate(${offset}px)`;
+    this.stickyHeaderEl.classList.toggle('lh-sticky-header--visible', showStickyHeader);
   }
 }
 
