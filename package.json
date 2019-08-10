@@ -7,10 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack-dev-server --mode development",
     "transpile": "./node_modules/.bin/babel src -d dist --copy-files",
-    "prepublishOnly": "npm run transpile",
+    "prepublishOnly": "yarn transpile",
     "build": "webpack --mode production",
     "deploy": "gh-pages -d example/dist",
-    "publish-demo": "npm run build && npm run deploy"
+    "publish-demo": "yarn prepublishOnly && yarn build && yarn deploy"
   },
   "repository": {
     "type": "git",
