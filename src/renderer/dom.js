@@ -1,6 +1,5 @@
 import Util from "./util";
 
-/* eslint-disable no-restricted-globals */
 /**
  * @license
  * Copyright 2017 Google Inc. All Rights Reserved.
@@ -17,6 +16,7 @@ import Util from "./util";
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+("use strict");
 
 /* globals URL self Util */
 
@@ -30,7 +30,7 @@ class DOM {
     /** @type {Document} */
     this._document = document;
     /** @type {string} */
-    this._lighthouseChannel = 'unknown';
+    this._lighthouseChannel = "unknown";
   }
 
   /**
@@ -49,7 +49,7 @@ class DOM {
     }
     Object.keys(attrs).forEach(key => {
       const value = attrs[key];
-      if (typeof value !== 'undefined') {
+      if (typeof value !== "undefined") {
         element.setAttribute(key, value);
       }
     });
@@ -86,7 +86,9 @@ class DOM {
    * @throws {Error}
    */
   cloneTemplate(selector, context) {
-    const template = /** @type {?HTMLTemplateElement} */ (context.querySelector(selector));
+    const template = /** @type {?HTMLTemplateElement} */ (context.querySelector(
+      selector
+    ));
     if (!template) {
       throw new Error(`Template not found: template${selector}`);
     }
@@ -95,10 +97,10 @@ class DOM {
 
     // Prevent duplicate styles in the DOM. After a template has been stamped
     // for the first time, remove the clone's styles so they're not re-added.
-    if (template.hasAttribute('data-stamped')) {
-      this.findAll('style', clone).forEach(style => style.remove());
+    if (template.hasAttribute("data-stamped")) {
+      this.findAll("style", clone).forEach(style => style.remove());
     }
-    template.setAttribute('data-stamped', 'true');
+    template.setAttribute("data-stamped", "true");
 
     return clone;
   }
@@ -107,8 +109,8 @@ class DOM {
    * Resets the "stamped" state of the templates.
    */
   resetTemplates() {
-    this.findAll('template[data-stamped]', this._document).forEach(t => {
-      t.removeAttribute('data-stamped');
+    this.findAll("template[data-stamped]", this._document).forEach(t => {
+      t.removeAttribute("data-stamped");
     });
   }
 
@@ -117,7 +119,7 @@ class DOM {
    * @return {Element}
    */
   convertMarkdownLinkSnippets(text) {
-    const element = this.createElement('span');
+    const element = this.createElement("span");
 
     for (const segment of Util.splitMarkdownLink(text)) {
       if (!segment.isLink) {
@@ -129,15 +131,15 @@ class DOM {
       // Otherwise, append any links found.
       const url = new URL(segment.linkHref);
 
-      const DEVELOPERS_GOOGLE_ORIGIN = 'https://developers.google.com';
-      if (url.origin === DEVELOPERS_GOOGLE_ORIGIN) {
-        url.searchParams.set('utm_source', 'lighthouse');
-        url.searchParams.set('utm_medium', this._lighthouseChannel);
+      const DOCS_ORIGINS = ["https://developers.google.com", "https://web.dev"];
+      if (DOCS_ORIGINS.includes(url.origin)) {
+        url.searchParams.set("utm_source", "lighthouse");
+        url.searchParams.set("utm_medium", this._lighthouseChannel);
       }
 
-      const a = this.createElement('a');
-      a.rel = 'noopener';
-      a.target = '_blank';
+      const a = this.createElement("a");
+      a.rel = "noopener";
+      a.target = "_blank";
       a.textContent = segment.text;
       a.href = url.href;
       element.appendChild(a);
@@ -151,11 +153,11 @@ class DOM {
    * @return {Element}
    */
   convertMarkdownCodeSnippets(markdownText) {
-    const element = this.createElement('span');
+    const element = this.createElement("span");
 
     for (const segment of Util.splitMarkdownCodeSpans(markdownText)) {
       if (segment.isCode) {
-        const pre = this.createElement('code');
+        const pre = this.createElement("code");
         pre.textContent = segment.text;
         element.appendChild(pre);
       } else {
@@ -186,7 +188,7 @@ class DOM {
    * @return {boolean}
    */
   isDevTools() {
-    return !!this._document.querySelector('.lh-devtools');
+    return !!this._document.querySelector(".lh-devtools");
   }
 
   /**
@@ -216,7 +218,7 @@ class DOM {
   }
 }
 
-// if (typeof module !== 'undefined' && module.exports) {
+// if (typeof module !== "undefined" && module.exports) {
 //   module.exports = DOM;
 // } else {
 //   self.DOM = DOM;

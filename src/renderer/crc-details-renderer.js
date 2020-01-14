@@ -1,5 +1,3 @@
-// eslint-disable-next-line
-import DOM from "./dom";
 import Util from "./util";
 
 /**
@@ -18,7 +16,7 @@ import Util from "./util";
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict';
+("use strict");
 
 /**
  * @fileoverview This file contains helpers for constructing and rendering the
@@ -43,7 +41,7 @@ class CriticalRequestChainRenderer {
       startTime = node.request.startTime;
     }
 
-    return {tree, startTime, transferSize: 0};
+    return { tree, startTime, transferSize: 0 };
   }
 
   /**
@@ -59,17 +57,27 @@ class CriticalRequestChainRenderer {
    * @param {boolean=} parentIsLastChild
    * @return {CRCSegment}
    */
-  static createSegment(parent, id, startTime, transferSize, treeMarkers, parentIsLastChild) {
+  static createSegment(
+    parent,
+    id,
+    startTime,
+    transferSize,
+    treeMarkers,
+    parentIsLastChild
+  ) {
     const node = parent[id];
     const siblings = Object.keys(parent);
-    const isLastChild = siblings.indexOf(id) === (siblings.length - 1);
-    const hasChildren = !!node.children && Object.keys(node.children).length > 0;
+    const isLastChild = siblings.indexOf(id) === siblings.length - 1;
+    const hasChildren =
+      !!node.children && Object.keys(node.children).length > 0;
 
     // Copy the tree markers so that we don't change by reference.
-    const newTreeMarkers = Array.isArray(treeMarkers) ? treeMarkers.slice(0) : [];
+    const newTreeMarkers = Array.isArray(treeMarkers)
+      ? treeMarkers.slice(0)
+      : [];
 
     // Add on the new entry.
-    if (typeof parentIsLastChild !== 'undefined') {
+    if (typeof parentIsLastChild !== "undefined") {
       newTreeMarkers.push(!parentIsLastChild);
     }
 
@@ -79,7 +87,7 @@ class CriticalRequestChainRenderer {
       hasChildren,
       startTime,
       transferSize: transferSize + node.request.transferSize,
-      treeMarkers: newTreeMarkers,
+      treeMarkers: newTreeMarkers
     };
   }
 
@@ -92,50 +100,61 @@ class CriticalRequestChainRenderer {
    * @return {Node}
    */
   static createChainNode(dom, tmpl, segment, detailsRenderer) {
-    const chainsEl = dom.cloneTemplate('#tmpl-lh-crc__chains', tmpl);
+    const chainsEl = dom.cloneTemplate("#tmpl-lh-crc__chains", tmpl);
 
     // Hovering over request shows full URL.
-    dom.find('.crc-node', chainsEl).setAttribute('title', segment.node.request.url);
+    dom
+      .find(".crc-node", chainsEl)
+      .setAttribute("title", segment.node.request.url);
 
-    const treeMarkeEl = dom.find('.crc-node__tree-marker', chainsEl);
+    const treeMarkeEl = dom.find(".crc-node__tree-marker", chainsEl);
 
     // Construct lines and add spacers for sub requests.
     segment.treeMarkers.forEach(separator => {
       if (separator) {
-        treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker vert'));
-        treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker'));
+        treeMarkeEl.appendChild(dom.createElement("span", "tree-marker vert"));
+        treeMarkeEl.appendChild(dom.createElement("span", "tree-marker"));
       } else {
-        treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker'));
-        treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker'));
+        treeMarkeEl.appendChild(dom.createElement("span", "tree-marker"));
+        treeMarkeEl.appendChild(dom.createElement("span", "tree-marker"));
       }
     });
 
     if (segment.isLastChild) {
-      treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker up-right'));
-      treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker right'));
+      treeMarkeEl.appendChild(
+        dom.createElement("span", "tree-marker up-right")
+      );
+      treeMarkeEl.appendChild(dom.createElement("span", "tree-marker right"));
     } else {
-      treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker vert-right'));
-      treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker right'));
+      treeMarkeEl.appendChild(
+        dom.createElement("span", "tree-marker vert-right")
+      );
+      treeMarkeEl.appendChild(dom.createElement("span", "tree-marker right"));
     }
 
     if (segment.hasChildren) {
-      treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker horiz-down'));
+      treeMarkeEl.appendChild(
+        dom.createElement("span", "tree-marker horiz-down")
+      );
     } else {
-      treeMarkeEl.appendChild(dom.createElement('span', 'tree-marker right'));
+      treeMarkeEl.appendChild(dom.createElement("span", "tree-marker right"));
     }
 
     // Fill in url, host, and request size information.
     const url = segment.node.request.url;
     const linkEl = detailsRenderer.renderTextURL(url);
-    const treevalEl = dom.find('.crc-node__tree-value', chainsEl);
+    const treevalEl = dom.find(".crc-node__tree-value", chainsEl);
     treevalEl.appendChild(linkEl);
 
     if (!segment.hasChildren) {
-      const {startTime, endTime, transferSize} = segment.node.request;
-      const span = dom.createElement('span', 'crc-node__chain-duration');
-      span.textContent = ' - ' + Util.formatMilliseconds((endTime - startTime) * 1000) + ', ';
-      const span2 = dom.createElement('span', 'crc-node__chain-duration');
-      span2.textContent = Util.formatBytesToKB(transferSize, 0.01);
+      const { startTime, endTime, transferSize } = segment.node.request;
+      const span = dom.createElement("span", "crc-node__chain-duration");
+      span.textContent =
+        " - " +
+        Util.i18n.formatMilliseconds((endTime - startTime) * 1000) +
+        ", ";
+      const span2 = dom.createElement("span", "crc-node__chain-duration");
+      span2.textContent = Util.i18n.formatBytesToKB(transferSize, 0.01);
 
       treevalEl.appendChild(span);
       treevalEl.appendChild(span2);
@@ -154,12 +173,27 @@ class CriticalRequestChainRenderer {
    * @param {DetailsRenderer} detailsRenderer
    */
   static buildTree(dom, tmpl, segment, elem, details, detailsRenderer) {
-    elem.appendChild(CRCRenderer.createChainNode(dom, tmpl, segment, detailsRenderer));
+    elem.appendChild(
+      CRCRenderer.createChainNode(dom, tmpl, segment, detailsRenderer)
+    );
     if (segment.node.children) {
       for (const key of Object.keys(segment.node.children)) {
-        const childSegment = CRCRenderer.createSegment(segment.node.children, key,
-          segment.startTime, segment.transferSize, segment.treeMarkers, segment.isLastChild);
-        CRCRenderer.buildTree(dom, tmpl, childSegment, elem, details, detailsRenderer);
+        const childSegment = CRCRenderer.createSegment(
+          segment.node.children,
+          key,
+          segment.startTime,
+          segment.transferSize,
+          segment.treeMarkers,
+          segment.isLastChild
+        );
+        CRCRenderer.buildTree(
+          dom,
+          tmpl,
+          childSegment,
+          elem,
+          details,
+          detailsRenderer
+        );
       }
     }
   }
@@ -172,39 +206,52 @@ class CriticalRequestChainRenderer {
    * @return {Element}
    */
   static render(dom, templateContext, details, detailsRenderer) {
-    const tmpl = dom.cloneTemplate('#tmpl-lh-crc', templateContext);
-    const containerEl = dom.find('.lh-crc', tmpl);
+    const tmpl = dom.cloneTemplate("#tmpl-lh-crc", templateContext);
+    const containerEl = dom.find(".lh-crc", tmpl);
 
     // Fill in top summary.
-    dom.find('.crc-initial-nav', tmpl).textContent = Util.UIStrings.crcInitialNavigation;
-    dom.find('.lh-crc__longest_duration_label', tmpl).textContent =
-        Util.UIStrings.crcLongestDurationLabel;
-    dom.find('.lh-crc__longest_duration', tmpl).textContent =
-        Util.formatMilliseconds(details.longestChain.duration);
+    dom.find(".crc-initial-nav", tmpl).textContent =
+      Util.i18n.strings.crcInitialNavigation;
+    dom.find(".lh-crc__longest_duration_label", tmpl).textContent =
+      Util.i18n.strings.crcLongestDurationLabel;
+    dom.find(
+      ".lh-crc__longest_duration",
+      tmpl
+    ).textContent = Util.i18n.formatMilliseconds(details.longestChain.duration);
 
     // Construct visual tree.
     const root = CRCRenderer.initTree(details.chains);
     for (const key of Object.keys(root.tree)) {
-      const segment = CRCRenderer.createSegment(root.tree, key, root.startTime, root.transferSize);
-      CRCRenderer.buildTree(dom, tmpl, segment, containerEl, details, detailsRenderer);
+      const segment = CRCRenderer.createSegment(
+        root.tree,
+        key,
+        root.startTime,
+        root.transferSize
+      );
+      CRCRenderer.buildTree(
+        dom,
+        tmpl,
+        segment,
+        containerEl,
+        details,
+        detailsRenderer
+      );
     }
 
-    return dom.find('.lh-crc-container', tmpl);
+    return dom.find(".lh-crc-container", tmpl);
   }
 }
 
 // Alias b/c the name is really long.
 const CRCRenderer = CriticalRequestChainRenderer;
 
-// Allow Node require()'ing.
-// if (typeof module !== 'undefined' && module.exports) {
+// // Allow Node require()'ing.
+// if (typeof module !== "undefined" && module.exports) {
 //   module.exports = CriticalRequestChainRenderer;
 // } else {
 //   self.CriticalRequestChainRenderer = CriticalRequestChainRenderer;
 // }
-
 export default CriticalRequestChainRenderer;
-
 /** @typedef {{
       node: LH.Audit.SimpleCriticalRequestNode[string],
       isLastChild: boolean,
