@@ -1,4 +1,4 @@
-<!--
+export default `<!--
 @license
 Copyright 2018 Google Inc. All Rights Reserved.
 
@@ -186,7 +186,7 @@ limitations under the License.
     }
 
     .lh-devtools .lh-sticky-header {
-      /* The report within DevTools is placed in a container with overflow, which changes the placement of this header unless we change `position` to `sticky.` */
+      
       position: sticky;
     }
 
@@ -952,3 +952,4 @@ limitations under the License.
     </div>
   </template>
 
+`;

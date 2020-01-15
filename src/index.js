@@ -6,12 +6,10 @@ import ReportUIFeatures from './renderer/report-ui-features';
 import Logger from './renderer/logger';
 
 import './report-styles.css';
-import __html from './templates.html';
-
-const template = { __html: __html };
+import __html from './templates';
 
 export const Template = () => {
-  return <div dangerouslySetInnerHTML={template} />;
+  return <div dangerouslySetInnerHTML={{ __html: __html }} />;
 };
 
 class ReportViewer extends Component {
