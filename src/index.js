@@ -1,29 +1,35 @@
-import React, { Component } from "react";
+import React, { Component } from 'react';
 
-import DOM from "./renderer/dom";
-import ReportRenderer from "./renderer/report-renderer";
-import ReportUIFeatures from "./renderer/report-ui-features";
-import Logger from "./renderer/logger";
-import Template from "./Template";
+import DOM from './renderer/dom';
+import ReportRenderer from './renderer/report-renderer';
+import ReportUIFeatures from './renderer/report-ui-features';
+import Logger from './renderer/logger';
 
-import "./report-styles.css";
+import './report-styles.css';
+import __html from './templates.html';
+
+const template = { __html: __html };
+
+export const Template = () => {
+  return <div dangerouslySetInnerHTML={template} />;
+};
 
 class ReportViewer extends Component {
   constructor(props) {
     super(props);
-    document.addEventListener("lh-log", e => {
-      const logger = new Logger(document.querySelector("#lh-log"));
+    document.addEventListener('lh-log', e => {
+      const logger = new Logger(document.querySelector('#lh-log'));
       switch (e.detail.cmd) {
-        case "log":
+        case 'log':
           logger.log(e.detail.msg);
           break;
-        case "warn":
+        case 'warn':
           logger.warn(e.detail.msg);
           break;
-        case "error":
+        case 'error':
           logger.error(e.detail.msg);
           break;
-        case "hide":
+        case 'hide':
           logger.hide();
           break;
         default:
@@ -41,7 +47,7 @@ class ReportViewer extends Component {
     const dom = new DOM(document);
     const renderer = new ReportRenderer(dom);
 
-    const container = document.querySelector("main.react-lighthouse-viewer");
+    const container = document.querySelector('main.react-lighthouse-viewer');
 
     renderer.renderReport(json, container);
 
@@ -54,9 +60,7 @@ class ReportViewer extends Component {
   render() {
     return (
       <div className="lh-root lh-vars">
-        <div>
-          <Template />
-        </div>
+        <Template />
         <main className="react-lighthouse-viewer">
           {/* report populated here */}
         </main>
