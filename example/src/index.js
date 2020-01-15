@@ -1,10 +1,9 @@
-import React from "react";
-import { render } from "react-dom";
-import ReportViewer from "../../src";
+import React from 'react';
+import { render } from 'react-dom';
+import ReportViewer from '../../src';
 
-import "./index.css";
-
-import jsonReport from "./report5.json";
+import './index.css';
+import jsonReport from './report5.json';
 
 const App = () => (
   <div className="App">
@@ -16,4 +15,4 @@ const App = () => (
     </div>
   </div>
 );
-render(<App />, document.getElementById("root"));
+render(<App />, document.getElementById('root'));

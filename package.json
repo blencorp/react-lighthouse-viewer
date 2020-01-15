@@ -1,16 +1,16 @@
 {
   "name": "react-lighthouse-viewer",
-  "version": "2.6.7",
+  "version": "1.0.9",
   "description": "A React component used for rendering Lighthouse JSON reports.",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack-dev-server --mode development",
     "transpile": "./node_modules/.bin/babel src -d dist --copy-files",
-    "prepublishOnly": "yarn transpile",
+    "prepublishOnly": "npm run transpile",
     "build": "webpack --mode production",
     "deploy": "gh-pages -d example/dist",
-    "publish-demo": "yarn prepublishOnly && yarn build && yarn deploy"
+    "publish-demo": "npm run build && npm run deploy"
   },
   "repository": {
     "type": "git",
@@ -28,26 +28,20 @@
   },
   "homepage": "https://github.com/blencorp/react-lighthouse-viewer#readme",
   "devDependencies": {
-    "@babel/cli": "^7.8.3",
-    "@babel/core": "^7.8.3",
-    "@babel/preset-env": "^7.8.3",
-    "@babel/preset-react": "^7.8.3",
-    "autoprefixer": "^9.7.4",
+    "@babel/cli": "^7.5.5",
+    "@babel/core": "^7.5.5",
+    "@babel/preset-env": "^7.5.5",
+    "@babel/preset-react": "^7.0.0",
     "babel-loader": "^8.0.6",
     "babel-preset-env": "^1.7.0",
-    "css-loader": "^3.4.2",
-    "cssnano": "^4.1.10",
-    "gh-pages": "^2.2.0",
+    "css-loader": "^3.2.0",
+    "gh-pages": "^2.1.1",
     "html-webpack-plugin": "^3.2.0",
-    "postcss-cssnext": "^3.1.0",
-    "postcss-import": "^12.0.1",
-    "postcss-loader": "^3.0.0",
-    "react": "^16.12.0",
-    "react-dom": "^16.12.0",
-    "style-loader": "^1.1.2",
-    "sugarss": "^2.0.0",
-    "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10",
-    "webpack-dev-server": "^3.10.1"
+    "react": "^16.9.0",
+    "react-dom": "^16.9.0",
+    "style-loader": "^1.0.0",
+    "webpack": "^4.39.1",
+    "webpack-cli": "^3.3.6",
+    "webpack-dev-server": "^3.7.2"
   }
 }
