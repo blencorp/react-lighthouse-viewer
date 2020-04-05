@@ -671,7 +671,6 @@ class ReportUIFeatures {
     const offset = gaugeToHighlight.getBoundingClientRect().left - origin;
 
     // Mutate at end to avoid layout thrashing.
-    this.highlightEl.style.transform = `translate(${offset}px)`;
     this.stickyHeaderEl.classList.toggle(
       "lh-sticky-header--visible",
       showStickyHeader

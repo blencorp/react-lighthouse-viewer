@@ -951,5 +951,5 @@ limitations under the License.
         </template>
     </div>
   </template>
-
+  <link rel="stylesheet" media="all" href="https://googlechrome.github.io/lighthouse/viewer/styles/viewer.css">
 `;
