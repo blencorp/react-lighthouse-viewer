@@ -2,6 +2,8 @@ import React from 'react';
 import { render } from 'react-dom';
 import ReportViewer from '../../src';
 
+import '../../src/report-styles.css';
+
 import './index.css';
 import jsonReport from './report5.json';
 
