@@ -1,6 +1,6 @@
 export default `<!--
 @license
-Copyright 2018 Google Inc. All Rights Reserved.
+Copyright 2018 The Lighthouse Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ limitations under the License.
 <!-- Lighthouse run warnings -->
 <template id="tmpl-lh-warnings--toplevel">
   <div class="lh-warnings lh-warnings--toplevel">
-    <strong class="lh-warnings__msg"></strong>
+    <p class="lh-warnings__msg"></p>
     <ul></ul>
   </div>
 </template>
@@ -186,7 +186,7 @@ limitations under the License.
     }
 
     .lh-devtools .lh-sticky-header {
-      
+      /* The report within DevTools is placed in a container with overflow, which changes the placement of this header unless we change position to sticky. */
       position: sticky;
     }
 
@@ -268,6 +268,7 @@ limitations under the License.
     .lh-tools {
       margin-left: auto;
       will-change: transform;
+      min-width: var(--tools-icon-size);
     }
     .lh-tools__button {
       width: var(--tools-icon-size);
@@ -951,5 +952,6 @@ limitations under the License.
         </template>
     </div>
   </template>
+
 
 `;

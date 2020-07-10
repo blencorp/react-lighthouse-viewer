@@ -1,12 +1,6 @@
-// eslint-disable-next-line
-
-import DOM from "./dom";
-import CategoryRenderer from "./category-renderer";
-import Util from "./util";
-
 /**
  * @license
- * Copyright 2018 Google Inc. All Rights Reserved.
+ * Copyright 2018 The Lighthouse Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +14,10 @@ import Util from "./util";
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-("use strict");
+'use strict';
+
+import CategoryRenderer from './category-renderer.js';
+import Util from './util.js';
 
 /* globals self, Util, CategoryRenderer */
 
@@ -29,14 +26,14 @@ import Util from "./util";
 class PerformanceCategoryRenderer extends CategoryRenderer {
   /**
    * @param {LH.ReportResult.AuditRef} audit
-   * @return {Element}
+   * @return {!Element}
    */
   _renderMetric(audit) {
     const tmpl = this.dom.cloneTemplate(
-      "#tmpl-lh-metric",
+      '#tmpl-lh-metric',
       this.templateContext
     );
-    const element = this.dom.find(".lh-metric", tmpl);
+    const element = this.dom.find('.lh-metric', tmpl);
     element.id = audit.result.id;
     const rating = Util.calculateRating(
       audit.result.score,
@@ -44,23 +41,23 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
     );
     element.classList.add(`lh-metric--${rating}`);
 
-    const titleEl = this.dom.find(".lh-metric__title", tmpl);
+    const titleEl = this.dom.find('.lh-metric__title', tmpl);
     titleEl.textContent = audit.result.title;
 
-    const valueEl = this.dom.find(".lh-metric__value", tmpl);
-    valueEl.textContent = audit.result.displayValue || "";
+    const valueEl = this.dom.find('.lh-metric__value', tmpl);
+    valueEl.textContent = audit.result.displayValue || '';
 
-    const descriptionEl = this.dom.find(".lh-metric__description", tmpl);
+    const descriptionEl = this.dom.find('.lh-metric__description', tmpl);
     descriptionEl.appendChild(
       this.dom.convertMarkdownLinkSnippets(audit.result.description)
     );
 
-    if (audit.result.scoreDisplayMode === "error") {
-      descriptionEl.textContent = "";
-      valueEl.textContent = "Error!";
-      const tooltip = this.dom.createChildOf(descriptionEl, "span");
+    if (audit.result.scoreDisplayMode === 'error') {
+      descriptionEl.textContent = '';
+      valueEl.textContent = 'Error!';
+      const tooltip = this.dom.createChildOf(descriptionEl, 'span');
       tooltip.textContent =
-        audit.result.errorMessage || "Report error: no metric information";
+        audit.result.errorMessage || 'Report error: no metric information';
     }
 
     return element;
@@ -69,29 +66,29 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
   /**
    * @param {LH.ReportResult.AuditRef} audit
    * @param {number} scale
-   * @return {Element}
+   * @return {!Element}
    */
   _renderOpportunity(audit, scale) {
     const oppTmpl = this.dom.cloneTemplate(
-      "#tmpl-lh-opportunity",
+      '#tmpl-lh-opportunity',
       this.templateContext
     );
     const element = this.populateAuditValues(audit, oppTmpl);
     element.id = audit.result.id;
 
-    if (!audit.result.details || audit.result.scoreDisplayMode === "error") {
+    if (!audit.result.details || audit.result.scoreDisplayMode === 'error') {
       return element;
     }
     const details = audit.result.details;
-    if (details.type !== "opportunity") {
+    if (details.type !== 'opportunity') {
       return element;
     }
 
     // Overwrite the displayValue with opportunity's wastedMs
-    const displayEl = this.dom.find(".lh-audit__display-text", element);
+    const displayEl = this.dom.find('.lh-audit__display-text', element);
     const sparklineWidthPct = `${(details.overallSavingsMs / scale) * 100}%`;
     this.dom.find(
-      ".lh-sparkline__bar",
+      '.lh-sparkline__bar',
       element
     ).style.width = sparklineWidthPct;
     displayEl.textContent = Util.i18n.formatSeconds(
@@ -103,7 +100,7 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
     if (audit.result.displayValue) {
       const displayValue = audit.result.displayValue;
       this.dom.find(
-        ".lh-load-opportunity__sparkline",
+        '.lh-load-opportunity__sparkline',
         element
       ).title = displayValue;
       displayEl.title = displayValue;
@@ -120,15 +117,79 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
    * @return {number}
    */
   _getWastedMs(audit) {
-    if (audit.result.details && audit.result.details.type === "opportunity") {
+    if (audit.result.details && audit.result.details.type === 'opportunity') {
       const details = audit.result.details;
-      if (typeof details.overallSavingsMs !== "number") {
-        throw new Error("non-opportunity details passed to _getWastedMs");
+      if (typeof details.overallSavingsMs !== 'number') {
+        throw new Error('non-opportunity details passed to _getWastedMs');
       }
       return details.overallSavingsMs;
     } else {
       return Number.MIN_VALUE;
     }
+  }
+
+  /**
+   * Get a link to the interactive scoring calculator with the metric values.
+   * @param {LH.ReportResult.AuditRef[]} auditRefs
+   * @return {string}
+   */
+  _getScoringCalculatorHref(auditRefs) {
+    const v5andv6metrics = auditRefs.filter(
+      (audit) => audit.group === 'metrics'
+    );
+    const fci = auditRefs.find((audit) => audit.id === 'first-cpu-idle');
+    const fmp = auditRefs.find(
+      (audit) => audit.id === 'first-meaningful-paint'
+    );
+    if (fci) v5andv6metrics.push(fci);
+    if (fmp) v5andv6metrics.push(fmp);
+
+    /** @type {Record<string, string>} */
+    const acronymMapping = {
+      'cumulative-layout-shift': 'CLS',
+      'first-contentful-paint': 'FCP',
+      'first-cpu-idle': 'FCI',
+      'first-meaningful-paint': 'FMP',
+      interactive: 'TTI',
+      'largest-contentful-paint': 'LCP',
+      'speed-index': 'SI',
+      'total-blocking-time': 'TBT',
+    };
+
+    /**
+     * Clamp figure to 2 decimal places
+     * @param {number} val
+     * @return {number}
+     */
+    const clampTo2Decimals = (val) => Math.round(val * 100) / 100;
+
+    const metricPairs = v5andv6metrics.map((audit) => {
+      let value;
+      if (typeof audit.result.numericValue === 'number') {
+        value =
+          audit.id === 'cumulative-layout-shift'
+            ? clampTo2Decimals(audit.result.numericValue)
+            : Math.round(audit.result.numericValue);
+        value = value.toString();
+      } else {
+        value = 'null';
+      }
+      return [acronymMapping[audit.id] || audit.id, value];
+    });
+    const paramPairs = [...metricPairs];
+
+    if (Util.reportJson) {
+      paramPairs.push([
+        'device',
+        Util.reportJson.configSettings.emulatedFormFactor,
+      ]);
+      paramPairs.push(['version', Util.reportJson.lighthouseVersion]);
+    }
+
+    const params = new URLSearchParams(paramPairs);
+    const url = new URL('https://googlechrome.github.io/lighthouse/scorecalc/');
+    url.hash = params.toString();
+    return url.href;
   }
 
   /**
@@ -140,9 +201,9 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
    */
   render(category, groups, environment) {
     const strings = Util.i18n.strings;
-    const element = this.dom.createElement("div", "lh-category");
-    if (environment === "PSI") {
-      const gaugeEl = this.dom.createElement("div", "lh-score__gauge");
+    const element = this.dom.createElement('div', 'lh-category');
+    if (environment === 'PSI') {
+      const gaugeEl = this.dom.createElement('div', 'lh-score__gauge');
       gaugeEl.appendChild(this.renderScoreGauge(category, groups));
       element.appendChild(gaugeEl);
     } else {
@@ -155,65 +216,56 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
 
     // Metric descriptions toggle.
     const toggleTmpl = this.dom.cloneTemplate(
-      "#tmpl-lh-metrics-toggle",
+      '#tmpl-lh-metrics-toggle',
       this.templateContext
     );
-    const _toggleEl = this.dom.find(".lh-metrics-toggle", toggleTmpl);
+    const _toggleEl = this.dom.find('.lh-metrics-toggle', toggleTmpl);
     metricAuditsEl.append(..._toggleEl.childNodes);
 
     const metricAudits = category.auditRefs.filter(
-      audit => audit.group === "metrics"
+      (audit) => audit.group === 'metrics'
     );
-    const keyMetrics = metricAudits.filter(a => a.weight >= 3);
-    const otherMetrics = metricAudits.filter(a => a.weight < 3);
-
     const metricsBoxesEl = this.dom.createChildOf(
       metricAuditsEl,
-      "div",
-      "lh-columns"
-    );
-    const metricsColumn1El = this.dom.createChildOf(
-      metricsBoxesEl,
-      "div",
-      "lh-column"
-    );
-    const metricsColumn2El = this.dom.createChildOf(
-      metricsBoxesEl,
-      "div",
-      "lh-column"
+      'div',
+      'lh-metrics-container'
     );
 
-    keyMetrics.forEach(item => {
-      metricsColumn1El.appendChild(this._renderMetric(item));
-    });
-    otherMetrics.forEach(item => {
-      metricsColumn2El.appendChild(this._renderMetric(item));
+    metricAudits.forEach((item) => {
+      metricsBoxesEl.appendChild(this._renderMetric(item));
     });
 
-    // 'Values are estimated and may vary' is used as the category description for PSI
-    if (environment !== "PSI") {
-      const estValuesEl = this.dom.createChildOf(
-        metricAuditsEl,
-        "div",
-        "lh-metrics__disclaimer"
-      );
-      const disclaimerEl = this.dom.convertMarkdownLinkSnippets(
-        strings.varianceDisclaimer
-      );
-      estValuesEl.appendChild(disclaimerEl);
-    }
+    const estValuesEl = this.dom.createChildOf(
+      metricAuditsEl,
+      'div',
+      'lh-metrics__disclaimer'
+    );
+    const disclaimerEl = this.dom.convertMarkdownLinkSnippets(
+      strings.varianceDisclaimer
+    );
+    estValuesEl.appendChild(disclaimerEl);
 
-    metricAuditsEl.classList.add("lh-audit-group--metrics");
+    // Add link to score calculator.
+    const calculatorLink = this.dom.createChildOf(
+      estValuesEl,
+      'a',
+      'lh-calclink'
+    );
+    calculatorLink.target = '_blank';
+    calculatorLink.textContent = strings.calculatorLink;
+    calculatorLink.href = this._getScoringCalculatorHref(category.auditRefs);
+
+    metricAuditsEl.classList.add('lh-audit-group--metrics');
     element.appendChild(metricAuditsEl);
 
     // Filmstrip
     const timelineEl = this.dom.createChildOf(
       element,
-      "div",
-      "lh-filmstrip-container"
+      'div',
+      'lh-filmstrip-container'
     );
     const thumbnailAudit = category.auditRefs.find(
-      audit => audit.id === "screenshot-thumbnails"
+      (audit) => audit.id === 'screenshot-thumbnails'
     );
     const thumbnailResult = thumbnailAudit && thumbnailAudit.result;
     if (thumbnailResult && thumbnailResult.details) {
@@ -223,26 +275,31 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
     }
 
     // Budgets
-    const budgetAudit = category.auditRefs.find(
-      audit => audit.id === "performance-budget"
-    );
-    if (budgetAudit && budgetAudit.result.details) {
-      const table = this.detailsRenderer.render(budgetAudit.result.details);
-      if (table) {
-        table.id = budgetAudit.id;
-        table.classList.add("lh-audit");
-        const budgetsGroupEl = this.renderAuditGroup(groups.budgets);
-        budgetsGroupEl.appendChild(table);
-        budgetsGroupEl.classList.add("lh-audit-group--budgets");
-        element.appendChild(budgetsGroupEl);
+    /** @type {Array<Element>} */
+    const budgetTableEls = [];
+    ['performance-budget', 'timing-budget'].forEach((id) => {
+      const audit = category.auditRefs.find((audit) => audit.id === id);
+      if (audit && audit.result.details) {
+        const table = this.detailsRenderer.render(audit.result.details);
+        if (table) {
+          table.id = id;
+          table.classList.add('lh-audit');
+          budgetTableEls.push(table);
+        }
       }
+    });
+    if (budgetTableEls.length > 0) {
+      const budgetsGroupEl = this.renderAuditGroup(groups.budgets);
+      budgetTableEls.forEach((table) => budgetsGroupEl.appendChild(table));
+      budgetsGroupEl.classList.add('lh-audit-group--budgets');
+      element.appendChild(budgetsGroupEl);
     }
 
     // Opportunities
     const opportunityAudits = category.auditRefs
       .filter(
-        audit =>
-          audit.group === "load-opportunities" &&
+        (audit) =>
+          audit.group === 'load-opportunities' &&
           !Util.showAsPassed(audit.result)
       )
       .sort(
@@ -253,63 +310,63 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
     if (opportunityAudits.length) {
       // Scale the sparklines relative to savings, minimum 2s to not overstate small savings
       const minimumScale = 2000;
-      const wastedMsValues = opportunityAudits.map(audit =>
+      const wastedMsValues = opportunityAudits.map((audit) =>
         this._getWastedMs(audit)
       );
       const maxWaste = Math.max(...wastedMsValues);
       const scale = Math.max(Math.ceil(maxWaste / 1000) * 1000, minimumScale);
-      const groupEl = this.renderAuditGroup(groups["load-opportunities"]);
+      const groupEl = this.renderAuditGroup(groups['load-opportunities']);
       const tmpl = this.dom.cloneTemplate(
-        "#tmpl-lh-opportunity-header",
+        '#tmpl-lh-opportunity-header',
         this.templateContext
       );
 
-      this.dom.find(".lh-load-opportunity__col--one", tmpl).textContent =
+      this.dom.find('.lh-load-opportunity__col--one', tmpl).textContent =
         strings.opportunityResourceColumnLabel;
-      this.dom.find(".lh-load-opportunity__col--two", tmpl).textContent =
+      this.dom.find('.lh-load-opportunity__col--two', tmpl).textContent =
         strings.opportunitySavingsColumnLabel;
 
-      const headerEl = this.dom.find(".lh-load-opportunity__header", tmpl);
+      const headerEl = this.dom.find('.lh-load-opportunity__header', tmpl);
       groupEl.appendChild(headerEl);
-      opportunityAudits.forEach(item =>
+      opportunityAudits.forEach((item) =>
         groupEl.appendChild(this._renderOpportunity(item, scale))
       );
-      groupEl.classList.add("lh-audit-group--load-opportunities");
+      groupEl.classList.add('lh-audit-group--load-opportunities');
       element.appendChild(groupEl);
     }
 
     // Diagnostics
     const diagnosticAudits = category.auditRefs
       .filter(
-        audit =>
-          audit.group === "diagnostics" && !Util.showAsPassed(audit.result)
+        (audit) =>
+          audit.group === 'diagnostics' && !Util.showAsPassed(audit.result)
       )
       .sort((a, b) => {
         const scoreA =
-          a.result.scoreDisplayMode === "informative"
+          a.result.scoreDisplayMode === 'informative'
             ? 100
             : Number(a.result.score);
         const scoreB =
-          b.result.scoreDisplayMode === "informative"
+          b.result.scoreDisplayMode === 'informative'
             ? 100
             : Number(b.result.score);
         return scoreA - scoreB;
       });
 
     if (diagnosticAudits.length) {
-      const groupEl = this.renderAuditGroup(groups["diagnostics"]);
-      diagnosticAudits.forEach(item =>
+      const groupEl = this.renderAuditGroup(groups['diagnostics']);
+      diagnosticAudits.forEach((item) =>
         groupEl.appendChild(this.renderAudit(item))
       );
-      groupEl.classList.add("lh-audit-group--diagnostics");
+      groupEl.classList.add('lh-audit-group--diagnostics');
       element.appendChild(groupEl);
     }
 
     // Passed audits
     const passedAudits = category.auditRefs.filter(
-      audit =>
-        (audit.group === "load-opportunities" ||
-          audit.group === "diagnostics") &&
+      (audit) =>
+        (audit.group === 'load-opportunities' ||
+          audit.group === 'diagnostics') &&
         Util.showAsPassed(audit.result)
     );
 
@@ -317,17 +374,12 @@ class PerformanceCategoryRenderer extends CategoryRenderer {
 
     const clumpOpts = {
       auditRefs: passedAudits,
-      groupDefinitions: groups
+      groupDefinitions: groups,
     };
-    const passedElem = this.renderClump("passed", clumpOpts);
+    const passedElem = this.renderClump('passed', clumpOpts);
     element.appendChild(passedElem);
     return element;
   }
 }
 
-// if (typeof module !== "undefined" && module.exports) {
-//   module.exports = PerformanceCategoryRenderer;
-// } else {
-//   self.PerformanceCategoryRenderer = PerformanceCategoryRenderer;
-// }
 export default PerformanceCategoryRenderer;

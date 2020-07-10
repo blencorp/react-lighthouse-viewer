@@ -5,7 +5,7 @@ import ReportViewer from '../../src';
 import '../../src/report-styles.css';
 
 import './index.css';
-import jsonReport from './report5.json';
+import jsonReport from './report6.json';
 
 const App = () => (
   <div className="App">

@@ -16,7 +16,7 @@ export const Template = () => {
 class ReportViewer extends Component {
   constructor(props) {
     super(props);
-    document.addEventListener('lh-log', e => {
+    document.addEventListener('lh-log', (e) => {
       const logger = new Logger(document.querySelector('#lh-log'));
       switch (e.detail.cmd) {
         case 'log':

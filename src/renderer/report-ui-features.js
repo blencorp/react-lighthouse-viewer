@@ -1,8 +1,6 @@
-import Util from "./util";
-
 /**
  * @license
- * Copyright 2017 Google Inc. All Rights Reserved.
+ * Copyright 2017 The Lighthouse Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +14,9 @@ import Util from "./util";
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-("use strict");
+'use strict';
+
+import Util from './util';
 
 /* eslint-env browser */
 
@@ -27,9 +27,11 @@ import Util from "./util";
 
 /* globals getFilenamePrefix Util */
 
+/** @typedef {import('./dom')} DOM */
+
 /**
  * @param {HTMLTableElement} tableEl
- * @return {Array<HTMLTableRowElement>}
+ * @return {Array<HTMLElement>}
  */
 function getTableRows(tableEl) {
   return Array.from(tableEl.tBodies[0].rows);
@@ -86,28 +88,28 @@ class ReportUIFeatures {
     this._setupThirdPartyFilter();
     this._setUpCollapseDetailsAfterPrinting();
     this._resetUIState();
-    this._document.addEventListener("keyup", this.onKeyUp);
-    this._document.addEventListener("copy", this.onCopy);
+    this._document.addEventListener('keyup', this.onKeyUp);
+    this._document.addEventListener('copy', this.onCopy);
 
-    const topbarLogo = this._dom.find(".lh-topbar__logo", this._document);
-    topbarLogo.addEventListener("click", () => this._toggleDarkTheme());
+    const topbarLogo = this._dom.find('.lh-topbar__logo', this._document);
+    topbarLogo.addEventListener('click', () => this._toggleDarkTheme());
 
     let turnOffTheLights = false;
     // Do not query the system preferences for DevTools - DevTools should only apply dark theme
     // if dark is selected in the settings panel.
     if (
       !this._dom.isDevTools() &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
+      window.matchMedia('(prefers-color-scheme: dark)').matches
     ) {
       turnOffTheLights = true;
     }
 
     // Fireworks.
     const scoresAll100 = Object.values(report.categories).every(
-      cat => cat.score === 1
+      (cat) => cat.score === 1
     );
     const hasAllCoreCategories =
-      Object.keys(report.categories).filter(id => !Util.isPluginCategory(id))
+      Object.keys(report.categories).filter((id) => !Util.isPluginCategory(id))
         .length >= 5;
     if (scoresAll100 && hasAllCoreCategories) {
       turnOffTheLights = true;
@@ -121,10 +123,10 @@ class ReportUIFeatures {
     // There is only a sticky header when at least 2 categories are present.
     if (Object.keys(this.json.categories).length >= 2) {
       this._setupStickyHeaderElements();
-      const containerEl = this._dom.find(".lh-container", this._document);
+      const containerEl = this._dom.find('.lh-container', this._document);
       const elToAddScrollListener = this._getScrollParent(containerEl);
       elToAddScrollListener.addEventListener(
-        "scroll",
+        'scroll',
         this._updateStickyHeaderOnScroll
       );
 
@@ -139,32 +141,32 @@ class ReportUIFeatures {
         );
         resizeObserver.observe(containerEl);
       } else {
-        window.addEventListener("resize", this._updateStickyHeaderOnScroll);
+        window.addEventListener('resize', this._updateStickyHeaderOnScroll);
       }
     }
 
     // Show the metric descriptions by default when there is an error.
     const hasMetricError =
       report.categories.performance &&
-      report.categories.performance.auditRefs.some(audit =>
+      report.categories.performance.auditRefs.some((audit) =>
         Boolean(
-          audit.group === "metrics" && report.audits[audit.id].errorMessage
+          audit.group === 'metrics' && report.audits[audit.id].errorMessage
         )
       );
     if (hasMetricError) {
       const toggleInputEl = /** @type {HTMLInputElement} */ (this._dom.find(
-        ".lh-metrics-toggle__input",
+        '.lh-metrics-toggle__input',
         this._document
       ));
       toggleInputEl.checked = true;
     }
 
     // Fill in all i18n data.
-    for (const node of this._dom.findAll("[data-i18n]", this._dom.document())) {
+    for (const node of this._dom.findAll('[data-i18n]', this._dom.document())) {
       // These strings are guaranteed to (at least) have a default English string in Util.UIStrings,
       // so this cannot be undefined as long as `report-ui-features.data-i18n` test passes.
       const i18nAttr = /** @type {keyof LH.I18NRendererStrings} */ (node.getAttribute(
-        "data-i18n"
+        'data-i18n'
       ));
       node.textContent = Util.i18n.strings[i18nAttr];
     }
@@ -186,7 +188,7 @@ class ReportUIFeatures {
    */
   _getScrollParent(element) {
     const { overflowY } = window.getComputedStyle(element);
-    const isScrollable = overflowY !== "visible" && overflowY !== "hidden";
+    const isScrollable = overflowY !== 'visible' && overflowY !== 'hidden';
 
     if (isScrollable) {
       return element;
@@ -201,12 +203,12 @@ class ReportUIFeatures {
 
   _enableFireworks() {
     const scoresContainer = this._dom.find(
-      ".lh-scores-container",
+      '.lh-scores-container',
       this._document
     );
-    scoresContainer.classList.add("score100");
-    scoresContainer.addEventListener("click", _ => {
-      scoresContainer.classList.toggle("fireworks-paused");
+    scoresContainer.classList.add('score100');
+    scoresContainer.addEventListener('click', (_) => {
+      scoresContainer.classList.toggle('fireworks-paused');
     });
   }
 
@@ -222,7 +224,7 @@ class ReportUIFeatures {
   }
 
   _setupMediaQueryListeners() {
-    const mediaQuery = self.matchMedia("(max-width: 500px)");
+    const mediaQuery = self.matchMedia('(max-width: 500px)');
     mediaQuery.addListener(this.onMediaQueryChange);
     // Ensure the handler is called on init
     this.onMediaQueryChange(mediaQuery);
@@ -233,113 +235,138 @@ class ReportUIFeatures {
    * @param {MediaQueryList|MediaQueryListEvent} mql
    */
   onMediaQueryChange(mql) {
-    const root = this._dom.find(".lh-root", this._document);
-    root.classList.toggle("lh-narrow", mql.matches);
+    const root = this._dom.find('.lh-root', this._document);
+    root.classList.toggle('lh-narrow', mql.matches);
   }
 
   _setupThirdPartyFilter() {
     // Some audits should not display the third party filter option.
     const thirdPartyFilterAuditExclusions = [
       // This audit deals explicitly with third party resources.
-      "uses-rel-preconnect"
+      'uses-rel-preconnect',
+    ];
+    // Some audits should hide third party by default.
+    const thirdPartyFilterAuditHideByDefault = [
+      // Only first party resources are actionable.
+      'legacy-javascript',
     ];
 
     // Get all tables with a text url column.
     /** @type {Array<HTMLTableElement>} */
-    const tables = Array.from(this._document.querySelectorAll(".lh-table"));
+    const tables = Array.from(this._document.querySelectorAll('.lh-table'));
     const tablesWithUrls = tables
-      .filter(el =>
+      .filter((el) =>
         el.querySelector(
-          "td.lh-table-column--url, td.lh-table-column--source-location"
+          'td.lh-table-column--url, td.lh-table-column--source-location'
         )
       )
-      .filter(el => {
-        const containingAudit = el.closest(".lh-audit");
-        if (!containingAudit) throw new Error(".lh-table not within audit");
+      .filter((el) => {
+        const containingAudit = el.closest('.lh-audit');
+        if (!containingAudit) throw new Error('.lh-table not within audit');
         return !thirdPartyFilterAuditExclusions.includes(containingAudit.id);
       });
 
     tablesWithUrls.forEach((tableEl, index) => {
-      const urlItems = this._getUrlItems(tableEl);
+      const rowEls = getTableRows(tableEl);
       const thirdPartyRows = this._getThirdPartyRows(
-        tableEl,
-        urlItems,
+        rowEls,
         this.json.finalUrl
       );
 
       // create input box
       const filterTemplate = this._dom.cloneTemplate(
-        "#tmpl-lh-3p-filter",
+        '#tmpl-lh-3p-filter',
         this._templateContext
       );
       const filterInput = /** @type {HTMLInputElement} */ (this._dom.find(
-        "input",
+        'input',
         filterTemplate
       ));
       const id = `lh-3p-filter-label--${index}`;
 
       filterInput.id = id;
-      filterInput.addEventListener("change", e => {
-        // Remove rows from the dom and keep track of them to re-add on uncheck.
-        // Why removing instead of hiding? To keep nth-child(even) background-colors working.
-        if (e.target instanceof HTMLInputElement && !e.target.checked) {
-          for (const row of thirdPartyRows.values()) {
-            row.remove();
-          }
-        } else {
-          // Add row elements back to original positions.
-          for (const [position, row] of thirdPartyRows.entries()) {
-            const childrenArr = getTableRows(tableEl);
-            tableEl.tBodies[0].insertBefore(row, childrenArr[position]);
-          }
+      filterInput.addEventListener('change', (e) => {
+        const shouldHideThirdParty =
+          e.target instanceof HTMLInputElement && !e.target.checked;
+        let even = true;
+        let rowEl = rowEls[0];
+        while (rowEl) {
+          const shouldHide =
+            shouldHideThirdParty && thirdPartyRows.includes(rowEl);
+
+          // Iterate subsequent associated sub item rows.
+          do {
+            rowEl.classList.toggle('lh-row--hidden', shouldHide);
+            // Adjust for zebra styling.
+            rowEl.classList.toggle('lh-row--even', !shouldHide && even);
+            rowEl.classList.toggle('lh-row--odd', !shouldHide && !even);
+
+            rowEl = /** @type {HTMLElement} */ (rowEl.nextElementSibling);
+          } while (rowEl && rowEl.classList.contains('lh-sub-item-row'));
+
+          if (!shouldHide) even = !even;
         }
       });
 
-      this._dom.find("label", filterTemplate).setAttribute("for", id);
+      this._dom.find('label', filterTemplate).setAttribute('for', id);
       this._dom.find(
-        ".lh-3p-filter-count",
+        '.lh-3p-filter-count',
         filterTemplate
-      ).textContent = `${thirdPartyRows.size}`;
-      this._dom.find(".lh-3p-ui-string", filterTemplate).textContent =
+      ).textContent = `${thirdPartyRows.length}`;
+      this._dom.find('.lh-3p-ui-string', filterTemplate).textContent =
         Util.i18n.strings.thirdPartyResourcesLabel;
 
+      const allThirdParty = thirdPartyRows.length === rowEls.length;
+      const allFirstParty = !thirdPartyRows.length;
+
       // If all or none of the rows are 3rd party, disable the checkbox.
-      if (thirdPartyRows.size === urlItems.length || !thirdPartyRows.size) {
+      if (allThirdParty || allFirstParty) {
         filterInput.disabled = true;
-        filterInput.checked = thirdPartyRows.size === urlItems.length;
+        filterInput.checked = allThirdParty;
       }
 
-      // Finally, add checkbox to the DOM.
+      // Add checkbox to the DOM.
       if (!tableEl.parentNode) return; // Keep tsc happy.
       tableEl.parentNode.insertBefore(filterTemplate, tableEl);
+
+      // Hide third-party rows for some audits by default.
+      const containingAudit = tableEl.closest('.lh-audit');
+      if (!containingAudit) throw new Error('.lh-table not within audit');
+      if (
+        thirdPartyFilterAuditHideByDefault.includes(containingAudit.id) &&
+        !allThirdParty
+      ) {
+        filterInput.click();
+      }
     });
   }
 
   /**
    * From a table with URL entries, finds the rows containing third-party URLs
-   * and returns a Map of those rows, mapping from row index to row Element.
-   * @param {HTMLTableElement} el
+   * and returns them.
+   * @param {HTMLElement[]} rowEls
    * @param {string} finalUrl
-   * @param {Array<HTMLElement>} urlItems
-   * @return {Map<number, HTMLTableRowElement>}
+   * @return {Array<HTMLElement>}
    */
-  _getThirdPartyRows(el, urlItems, finalUrl) {
+  _getThirdPartyRows(rowEls, finalUrl) {
+    /** @type {Array<HTMLElement>} */
+    const thirdPartyRows = [];
     const finalUrlRootDomain = Util.getRootDomain(finalUrl);
 
-    /** @type {Map<number, HTMLTableRowElement>} */
-    const thirdPartyRows = new Map();
-    for (const urlItem of urlItems) {
+    for (const rowEl of rowEls) {
+      if (rowEl.classList.contains('lh-sub-item-row')) continue;
+
+      /** @type {HTMLElement|null} */
+      const urlItem = rowEl.querySelector('.lh-text__url');
+      if (!urlItem) continue;
+
       const datasetUrl = urlItem.dataset.url;
       if (!datasetUrl) continue;
       const isThirdParty =
         Util.getRootDomain(datasetUrl) !== finalUrlRootDomain;
       if (!isThirdParty) continue;
 
-      const urlRowEl = urlItem.closest("tr");
-      if (urlRowEl) {
-        const rowPosition = getTableRows(el).indexOf(urlRowEl);
-        thirdPartyRows.set(rowPosition, urlRowEl);
-      }
+      thirdPartyRows.push(rowEl);
     }
 
     return thirdPartyRows;
@@ -351,19 +378,19 @@ class ReportUIFeatures {
    * @return {Array<HTMLElement>}
    */
   _getUrlItems(tableEl) {
-    return this._dom.findAll(".lh-text__url", tableEl);
+    return this._dom.findAll('.lh-text__url', tableEl);
   }
 
   _setupStickyHeaderElements() {
-    this.topbarEl = this._dom.find(".lh-topbar", this._document);
-    this.scoreScaleEl = this._dom.find(".lh-scorescale", this._document);
-    this.stickyHeaderEl = this._dom.find(".lh-sticky-header", this._document);
+    this.topbarEl = this._dom.find('.lh-topbar', this._document);
+    this.scoreScaleEl = this._dom.find('.lh-scorescale', this._document);
+    this.stickyHeaderEl = this._dom.find('.lh-sticky-header', this._document);
 
     // Highlighter will be absolutely positioned at first gauge, then transformed on scroll.
     this.highlightEl = this._dom.createChildOf(
       this.stickyHeaderEl,
-      "div",
-      "lh-highlighter"
+      'div',
+      'lh-highlighter'
     );
   }
 
@@ -376,11 +403,11 @@ class ReportUIFeatures {
     if (this._copyAttempt && e.clipboardData) {
       // We want to write our own data to the clipboard, not the user's text selection.
       e.preventDefault();
-      e.clipboardData.setData("text/plain", JSON.stringify(this.json, null, 2));
+      e.clipboardData.setData('text/plain', JSON.stringify(this.json, null, 2));
 
-      this._fireEventOn("lh-log", this._document, {
-        cmd: "log",
-        msg: "Report JSON copied to clipboard"
+      this._fireEventOn('lh-log', this._document, {
+        cmd: 'log',
+        msg: 'Report JSON copied to clipboard',
       });
     }
 
@@ -391,31 +418,35 @@ class ReportUIFeatures {
    * Copies the report JSON to the clipboard (if supported by the browser).
    */
   onCopyButtonClick() {
-    this._fireEventOn("lh-analytics", this._document, {
-      cmd: "send",
-      fields: { hitType: "event", eventCategory: "report", eventAction: "copy" }
+    this._fireEventOn('lh-analytics', this._document, {
+      cmd: 'send',
+      fields: {
+        hitType: 'event',
+        eventCategory: 'report',
+        eventAction: 'copy',
+      },
     });
 
     try {
-      if (this._document.queryCommandSupported("copy")) {
+      if (this._document.queryCommandSupported('copy')) {
         this._copyAttempt = true;
 
         // Note: In Safari 10.0.1, execCommand('copy') returns true if there's
         // a valid text selection on the page. See http://caniuse.com/#feat=clipboard.
-        if (!this._document.execCommand("copy")) {
+        if (!this._document.execCommand('copy')) {
           this._copyAttempt = false; // Prevent event handler from seeing this as a copy attempt.
 
-          this._fireEventOn("lh-log", this._document, {
-            cmd: "warn",
-            msg: "Your browser does not support copy to clipboard."
+          this._fireEventOn('lh-log', this._document, {
+            cmd: 'warn',
+            msg: 'Your browser does not support copy to clipboard.',
           });
         }
       }
     } catch (/** @type {Error} */ e) {
       this._copyAttempt = false;
-      this._fireEventOn("lh-log", this._document, {
-        cmd: "log",
-        msg: e.message
+      this._fireEventOn('lh-log', this._document, {
+        cmd: 'log',
+        msg: e.message,
       });
     }
   }
@@ -439,49 +470,49 @@ class ReportUIFeatures {
 
     const el = /** @type {?Element} */ (e.target);
 
-    if (!el || !el.hasAttribute("data-action")) {
+    if (!el || !el.hasAttribute('data-action')) {
       return;
     }
 
-    switch (el.getAttribute("data-action")) {
-      case "copy":
+    switch (el.getAttribute('data-action')) {
+      case 'copy':
         this.onCopyButtonClick();
         break;
-      case "print-summary":
+      case 'print-summary':
         this.collapseAllDetails();
         this._print();
         break;
-      case "print-expanded":
+      case 'print-expanded':
         this.expandAllDetails();
         this._print();
         break;
-      case "save-json": {
+      case 'save-json': {
         const jsonStr = JSON.stringify(this.json, null, 2);
-        this._saveFile(new Blob([jsonStr], { type: "application/json" }));
+        this._saveFile(new Blob([jsonStr], { type: 'application/json' }));
         break;
       }
-      case "save-html": {
+      case 'save-html': {
         const htmlStr = this.getReportHtml();
         try {
-          this._saveFile(new Blob([htmlStr], { type: "text/html" }));
+          this._saveFile(new Blob([htmlStr], { type: 'text/html' }));
         } catch (/** @type {Error} */ e) {
-          this._fireEventOn("lh-log", this._document, {
-            cmd: "error",
-            msg: "Could not export as HTML. " + e.message
+          this._fireEventOn('lh-log', this._document, {
+            cmd: 'error',
+            msg: 'Could not export as HTML. ' + e.message,
           });
         }
         break;
       }
-      case "open-viewer": {
-        const viewerPath = "/lighthouse/viewer/";
+      case 'open-viewer': {
+        const viewerPath = '/lighthouse/viewer/';
         ReportUIFeatures.openTabAndSendJsonReport(this.json, viewerPath);
         break;
       }
-      case "save-gist": {
+      case 'save-gist': {
         this.saveAsGist();
         break;
       }
-      case "toggle-dark": {
+      case 'toggle-dark': {
         this._toggleDarkTheme();
         break;
       }
@@ -513,19 +544,19 @@ class ReportUIFeatures {
    * @protected
    */
   static openTabAndSendJsonReport(reportJson, viewerPath) {
-    const VIEWER_ORIGIN = "https://googlechrome.github.io";
+    const VIEWER_ORIGIN = 'https://googlechrome.github.io';
     // Chrome doesn't allow us to immediately postMessage to a popup right
     // after it's created. Normally, we could also listen for the popup window's
     // load event, however it is cross-domain and won't fire. Instead, listen
     // for a message from the target app saying "I'm open".
     const json = reportJson;
-    window.addEventListener("message", function msgHandler(messageEvent) {
+    window.addEventListener('message', function msgHandler(messageEvent) {
       if (messageEvent.origin !== VIEWER_ORIGIN) {
         return;
       }
       if (popup && messageEvent.data.opened) {
         popup.postMessage({ lhresults: json }, VIEWER_ORIGIN);
-        window.removeEventListener("message", msgHandler);
+        window.removeEventListener('message', msgHandler);
       }
     });
 
@@ -544,10 +575,10 @@ class ReportUIFeatures {
    */
   expandAllDetails() {
     const details = /** @type {Array<HTMLDetailsElement>} */ (this._dom.findAll(
-      ".lh-categories details",
+      '.lh-categories details',
       this._document
     ));
-    details.map(detail => (detail.open = true));
+    details.map((detail) => (detail.open = true));
   }
 
   /**
@@ -556,10 +587,10 @@ class ReportUIFeatures {
    */
   collapseAllDetails() {
     const details = /** @type {Array<HTMLDetailsElement>} */ (this._dom.findAll(
-      ".lh-categories details",
+      '.lh-categories details',
       this._document
     ));
-    details.map(detail => (detail.open = false));
+    details.map((detail) => (detail.open = false));
   }
 
   /**
@@ -568,13 +599,13 @@ class ReportUIFeatures {
    */
   _setUpCollapseDetailsAfterPrinting() {
     // FF and IE implement these old events.
-    if ("onbeforeprint" in self) {
-      self.addEventListener("afterprint", this.collapseAllDetails);
+    if ('onbeforeprint' in self) {
+      self.addEventListener('afterprint', this.collapseAllDetails);
     } else {
       const win = /** @type {Window} */ (self);
       // Note: FF implements both window.onbeforeprint and media listeners. However,
       // it doesn't matchMedia doesn't fire when matching 'print'.
-      win.matchMedia("print").addListener(mql => {
+      win.matchMedia('print').addListener((mql) => {
         if (mql.matches) {
           this.expandAllDetails();
         } else {
@@ -599,7 +630,7 @@ class ReportUIFeatures {
    * @protected
    */
   saveAsGist() {
-    throw new Error("Cannot save as gist from base report");
+    throw new Error('Cannot save as gist from base report');
   }
 
   /**
@@ -610,13 +641,13 @@ class ReportUIFeatures {
   _saveFile(blob) {
     const filename = getFilenamePrefix({
       finalUrl: this.json.finalUrl,
-      fetchTime: this.json.fetchTime
+      fetchTime: this.json.fetchTime,
     });
 
-    const ext = blob.type.match("json") ? ".json" : ".html";
+    const ext = blob.type.match('json') ? '.json' : '.html';
     const href = URL.createObjectURL(blob);
 
-    const a = this._dom.createElement("a");
+    const a = this._dom.createElement('a');
     a.download = `${filename}${ext}`;
     a.href = href;
     this._document.body.appendChild(a); // Firefox requires anchor to be in the DOM.
@@ -624,7 +655,7 @@ class ReportUIFeatures {
 
     // cleanup.
     this._document.body.removeChild(a);
-    setTimeout(_ => URL.revokeObjectURL(href), 500);
+    setTimeout((_) => URL.revokeObjectURL(href), 500);
   }
 
   /**
@@ -632,14 +663,14 @@ class ReportUIFeatures {
    * @param {boolean} [force]
    */
   _toggleDarkTheme(force) {
-    const el = this._dom.find(".lh-vars", this._document);
+    const el = this._dom.find('.lh-vars', this._document);
     // This seems unnecessary, but in DevTools, passing "undefined" as the second
     // parameter acts like passing "false".
     // https://github.com/ChromeDevTools/devtools-frontend/blob/dd6a6d4153647c2a4203c327c595692c5e0a4256/front_end/dom_extension/DOMExtension.js#L809-L819
-    if (typeof force === "undefined") {
-      el.classList.toggle("dark");
+    if (typeof force === 'undefined') {
+      el.classList.toggle('dark');
     } else {
-      el.classList.toggle("dark", force);
+      el.classList.toggle('dark', force);
     }
   }
 
@@ -652,10 +683,10 @@ class ReportUIFeatures {
     // Highlight mini gauge when section is in view.
     // In view = the last category that starts above the middle of the window.
     const categoryEls = Array.from(
-      this._document.querySelectorAll(".lh-category")
+      this._document.querySelectorAll('.lh-category')
     );
     const categoriesAboveTheMiddle = categoryEls.filter(
-      el => el.getBoundingClientRect().top - window.innerHeight / 2 < 0
+      (el) => el.getBoundingClientRect().top - window.innerHeight / 2 < 0
     );
     const highlightIndex =
       categoriesAboveTheMiddle.length > 0
@@ -664,7 +695,7 @@ class ReportUIFeatures {
 
     // Category order matches gauge order in sticky header.
     const gaugeWrapperEls = this.stickyHeaderEl.querySelectorAll(
-      ".lh-gauge__wrapper"
+      '.lh-gauge__wrapper'
     );
     const gaugeToHighlight = gaugeWrapperEls[highlightIndex];
     const origin = gaugeWrapperEls[0].getBoundingClientRect().left;
@@ -673,7 +704,7 @@ class ReportUIFeatures {
     // Mutate at end to avoid layout thrashing.
     this.highlightEl.style.transform = `translate(${offset}px)`;
     this.stickyHeaderEl.classList.toggle(
-      "lh-sticky-header--visible",
+      'lh-sticky-header--visible',
       showStickyHeader
     );
   }
@@ -694,6 +725,7 @@ class DropDown {
     this.onDocumentKeyDown = this.onDocumentKeyDown.bind(this);
     this.onToggleClick = this.onToggleClick.bind(this);
     this.onToggleKeydown = this.onToggleKeydown.bind(this);
+    this.onMenuFocusOut = this.onMenuFocusOut.bind(this);
     this.onMenuKeydown = this.onMenuKeydown.bind(this);
 
     this._getNextMenuItem = this._getNextMenuItem.bind(this);
@@ -705,36 +737,37 @@ class DropDown {
    * @param {function(MouseEvent): any} menuClickHandler
    */
   setup(menuClickHandler) {
-    this._toggleEl = this._dom.find(".lh-tools__button", this._dom.document());
-    this._toggleEl.addEventListener("click", this.onToggleClick);
-    this._toggleEl.addEventListener("keydown", this.onToggleKeydown);
+    this._toggleEl = this._dom.find('.lh-tools__button', this._dom.document());
+    this._toggleEl.addEventListener('click', this.onToggleClick);
+    this._toggleEl.addEventListener('keydown', this.onToggleKeydown);
 
-    this._menuEl = this._dom.find(".lh-tools__dropdown", this._dom.document());
-    this._menuEl.addEventListener("keydown", this.onMenuKeydown);
-    this._menuEl.addEventListener("click", menuClickHandler);
+    this._menuEl = this._dom.find('.lh-tools__dropdown', this._dom.document());
+    this._menuEl.addEventListener('keydown', this.onMenuKeydown);
+    this._menuEl.addEventListener('click', menuClickHandler);
   }
 
   close() {
-    this._toggleEl.classList.remove("active");
-    this._toggleEl.setAttribute("aria-expanded", "false");
+    this._toggleEl.classList.remove('active');
+    this._toggleEl.setAttribute('aria-expanded', 'false');
     if (this._menuEl.contains(this._dom.document().activeElement)) {
       // Refocus on the tools button if the drop down last had focus
       this._toggleEl.focus();
     }
-    this._dom.document().removeEventListener("keydown", this.onDocumentKeyDown);
+    this._menuEl.removeEventListener('focusout', this.onMenuFocusOut);
+    this._dom.document().removeEventListener('keydown', this.onDocumentKeyDown);
   }
 
   /**
    * @param {HTMLElement} firstFocusElement
    */
   open(firstFocusElement) {
-    if (this._toggleEl.classList.contains("active")) {
+    if (this._toggleEl.classList.contains('active')) {
       // If the drop down is already open focus on the element
       firstFocusElement.focus();
     } else {
       // Wait for drop down transition to complete so options are focusable.
       this._menuEl.addEventListener(
-        "transitionend",
+        'transitionend',
         () => {
           firstFocusElement.focus();
         },
@@ -742,9 +775,10 @@ class DropDown {
       );
     }
 
-    this._toggleEl.classList.add("active");
-    this._toggleEl.setAttribute("aria-expanded", "true");
-    this._dom.document().addEventListener("keydown", this.onDocumentKeyDown);
+    this._toggleEl.classList.add('active');
+    this._toggleEl.setAttribute('aria-expanded', 'true');
+    this._menuEl.addEventListener('focusout', this.onMenuFocusOut);
+    this._dom.document().addEventListener('keydown', this.onDocumentKeyDown);
   }
 
   /**
@@ -755,7 +789,7 @@ class DropDown {
     e.preventDefault();
     e.stopImmediatePropagation();
 
-    if (this._toggleEl.classList.contains("active")) {
+    if (this._toggleEl.classList.contains('active')) {
       this.close();
     } else {
       this.open(this._getNextMenuItem());
@@ -768,13 +802,13 @@ class DropDown {
    */
   onToggleKeydown(e) {
     switch (e.code) {
-      case "ArrowUp":
+      case 'ArrowUp':
         e.preventDefault();
         this.open(this._getPreviousMenuItem());
         break;
-      case "ArrowDown":
-      case "Enter":
-      case " ":
+      case 'ArrowDown':
+      case 'Enter':
+      case ' ':
         e.preventDefault();
         this.open(this._getNextMenuItem());
         break;
@@ -791,19 +825,19 @@ class DropDown {
     const el = /** @type {?HTMLElement} */ (e.target);
 
     switch (e.code) {
-      case "ArrowUp":
+      case 'ArrowUp':
         e.preventDefault();
         this._getPreviousMenuItem(el).focus();
         break;
-      case "ArrowDown":
+      case 'ArrowDown':
         e.preventDefault();
         this._getNextMenuItem(el).focus();
         break;
-      case "Home":
+      case 'Home':
         e.preventDefault();
         this._getNextMenuItem().focus();
         break;
-      case "End":
+      case 'End':
         e.preventDefault();
         this._getPreviousMenuItem().focus();
         break;
@@ -824,23 +858,35 @@ class DropDown {
   }
 
   /**
+   * Focus out handler for the drop down menu.
+   * @param {FocusEvent} e
+   */
+  onMenuFocusOut(e) {
+    const focusedEl = /** @type {?HTMLElement} */ (e.relatedTarget);
+
+    if (!this._menuEl.contains(focusedEl)) {
+      this.close();
+    }
+  }
+
+  /**
    * @param {Array<Node>} allNodes
    * @param {?Node=} startNode
    * @returns {Node}
    */
   _getNextSelectableNode(allNodes, startNode) {
-    const nodes = allNodes.filter(node => {
+    const nodes = allNodes.filter((node) => {
       if (!(node instanceof HTMLElement)) {
         return false;
       }
 
       // 'Save as Gist' option may be disabled.
-      if (node.hasAttribute("disabled")) {
+      if (node.hasAttribute('disabled')) {
         return false;
       }
 
       // 'Save as Gist' option may have display none.
-      if (window.getComputedStyle(node).display === "none") {
+      if (window.getComputedStyle(node).display === 'none') {
         return false;
       }
 
@@ -879,11 +925,5 @@ class DropDown {
     ));
   }
 }
-
-// if (typeof module !== 'undefined' && module.exports) {
-//   module.exports = ReportUIFeatures;
-// } else {
-//   self.ReportUIFeatures = ReportUIFeatures;
-// }
 
 export default ReportUIFeatures;

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018 Google Inc. All Rights Reserved.
+ * Copyright 2018 The Lighthouse Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-"use strict";
+'use strict';
 
-/* globals self DOM PerformanceCategoryRenderer Util DetailsRenderer */
+/* globals self DOM PerformanceCategoryRenderer Util I18n DetailsRenderer */
 
 /**
  * Returns all the elements that PSI needs to render the report
@@ -34,7 +34,7 @@
  */
 function prepareLabData(LHResult, document) {
   const lhResult =
-    typeof LHResult === "string"
+    typeof LHResult === 'string'
       ? /** @type {LH.Result} */ (JSON.parse(LHResult))
       : LHResult;
 
@@ -44,6 +44,13 @@ function prepareLabData(LHResult, document) {
   dom.resetTemplates();
 
   const reportLHR = Util.prepareReportResult(lhResult);
+  const i18n = new I18n(reportLHR.configSettings.locale, {
+    // Set missing renderer strings to default (english) values.
+    ...Util.UIStrings,
+    ...reportLHR.i18n.rendererFormattedStrings,
+  });
+  Util.i18n = i18n;
+
   const perfCategory = reportLHR.categories.performance;
   if (!perfCategory)
     throw new Error(`No performance category. Can't make lab data section`);
@@ -62,23 +69,23 @@ function prepareLabData(LHResult, document) {
   const perfCategoryEl = perfRenderer.render(
     perfCategory,
     reportLHR.categoryGroups,
-    "PSI"
+    'PSI'
   );
 
-  const scoreGaugeEl = dom.find(".lh-score__gauge", perfCategoryEl);
+  const scoreGaugeEl = dom.find('.lh-score__gauge', perfCategoryEl);
   scoreGaugeEl.remove();
-  const scoreGaugeWrapperEl = dom.find(".lh-gauge__wrapper", scoreGaugeEl);
-  scoreGaugeWrapperEl.classList.add("lh-gauge__wrapper--huge");
+  const scoreGaugeWrapperEl = dom.find('.lh-gauge__wrapper', scoreGaugeEl);
+  scoreGaugeWrapperEl.classList.add('lh-gauge__wrapper--huge');
   // Remove navigation link on gauge
-  scoreGaugeWrapperEl.removeAttribute("href");
+  scoreGaugeWrapperEl.removeAttribute('href');
 
   const finalScreenshotDataUri = _getFinalScreenshot(perfCategory);
 
   const clonedScoreTemplate = dom.cloneTemplate(
-    "#tmpl-lh-scorescale",
+    '#tmpl-lh-scorescale',
     dom.document()
   );
-  const scoreScaleEl = dom.find(".lh-scorescale", clonedScoreTemplate);
+  const scoreScaleEl = dom.find('.lh-scorescale', clonedScoreTemplate);
 
   return { scoreGaugeEl, perfCategoryEl, finalScreenshotDataUri, scoreScaleEl };
 }
@@ -89,22 +96,16 @@ function prepareLabData(LHResult, document) {
  */
 function _getFinalScreenshot(perfCategory) {
   const auditRef = perfCategory.auditRefs.find(
-    audit => audit.id === "final-screenshot"
+    (audit) => audit.id === 'final-screenshot'
   );
   if (
     !auditRef ||
     !auditRef.result ||
-    auditRef.result.scoreDisplayMode === "error"
+    auditRef.result.scoreDisplayMode === 'error'
   )
     return null;
   return /** @type {LH.Audit.Details.Screenshot} */ (auditRef.result.details)
     .data;
 }
-
-// if (typeof module !== 'undefined' && module.exports) {
-//   module.exports = prepareLabData;
-// } else {
-//   self.prepareLabData = prepareLabData;
-// }
 
 export default prepareLabData;

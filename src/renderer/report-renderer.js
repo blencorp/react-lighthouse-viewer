@@ -1,16 +1,6 @@
-/* eslint-disable no-restricted-globals */
-/* eslint-disable no-restricted-globals */
-import DOM from "./dom";
-import Util from "./util";
-import DetailsRenderer from "./details-renderer";
-import CategoryRenderer from "./category-renderer";
-import PerformanceCategoryRenderer from "./performance-category-renderer";
-import PwaCategoryRenderer from "./pwa-category-renderer";
-import I18n from "./i18n";
-
 /**
  * @license
- * Copyright 2017 Google Inc. All Rights Reserved.
+ * Copyright 2017 The Lighthouse Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +14,14 @@ import I18n from "./i18n";
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-("use strict");
+'use strict';
+
+import Util from './util';
+import I18n from './i18n';
+import DetailsRenderer from './details-renderer';
+import CategoryRenderer from './category-renderer';
+import PerformanceCategoryRenderer from './performance-category-renderer';
+import PwaCategoryRenderer from './pwa-category-renderer';
 
 /**
  * @fileoverview The entry point for rendering the Lighthouse report based on the JSON output.
@@ -33,6 +30,7 @@ import I18n from "./i18n";
  * Dummy text for ensuring report robustness: </script> pre$`post %%LIGHTHOUSE_JSON%%
  */
 
+/** @typedef {import('./category-renderer')} CategoryRenderer */
 /** @typedef {import('./dom.js')} DOM */
 
 /* globals self, Util, DetailsRenderer, CategoryRenderer, I18n, PerformanceCategoryRenderer, PwaCategoryRenderer */
@@ -51,14 +49,14 @@ class ReportRenderer {
   /**
    * @param {LH.Result} result
    * @param {Element} container Parent element to render the report into.
-   * @return {Element}
+   * @return {!Element}
    */
   renderReport(result, container) {
-    this._dom.setLighthouseChannel(result.configSettings.channel || "unknown");
+    this._dom.setLighthouseChannel(result.configSettings.channel || 'unknown');
 
     const report = Util.prepareReportResult(result);
 
-    container.textContent = ""; // Remove previous report.
+    container.textContent = ''; // Remove previous report.
     container.appendChild(this._renderReport(report));
 
     return container;
@@ -79,11 +77,11 @@ class ReportRenderer {
    */
   _renderReportTopbar(report) {
     const el = this._dom.cloneTemplate(
-      "#tmpl-lh-topbar",
+      '#tmpl-lh-topbar',
       this._templateContext
     );
     const metadataUrl = /** @type {HTMLAnchorElement} */ (this._dom.find(
-      ".lh-topbar__url",
+      '.lh-topbar__url',
       el
     ));
     metadataUrl.href = metadataUrl.textContent = report.finalUrl;
@@ -96,14 +94,14 @@ class ReportRenderer {
    */
   _renderReportHeader() {
     const el = this._dom.cloneTemplate(
-      "#tmpl-lh-heading",
+      '#tmpl-lh-heading',
       this._templateContext
     );
     const domFragment = this._dom.cloneTemplate(
-      "#tmpl-lh-scores-wrapper",
+      '#tmpl-lh-scores-wrapper',
       this._templateContext
     );
-    const placeholder = this._dom.find(".lh-scores-wrapper-placeholder", el);
+    const placeholder = this._dom.find('.lh-scores-wrapper-placeholder', el);
     /** @type {HTMLDivElement} */ (placeholder.parentNode).replaceChild(
       domFragment,
       placeholder
@@ -117,13 +115,13 @@ class ReportRenderer {
    */
   _renderReportFooter(report) {
     const footer = this._dom.cloneTemplate(
-      "#tmpl-lh-footer",
+      '#tmpl-lh-footer',
       this._templateContext
     );
 
-    const env = this._dom.find(".lh-env__items", footer);
-    env.id = "runtime-settings";
-    this._dom.find(".lh-env__title", footer).textContent =
+    const env = this._dom.find('.lh-env__items', footer);
+    env.id = 'runtime-settings';
+    this._dom.find('.lh-env__title', footer).textContent =
       Util.i18n.strings.runtimeSettingsTitle;
 
     const envValues = Util.getEnvironmentDisplayValues(
@@ -132,39 +130,43 @@ class ReportRenderer {
     [
       {
         name: Util.i18n.strings.runtimeSettingsUrl,
-        description: report.finalUrl
+        description: report.finalUrl,
       },
       {
         name: Util.i18n.strings.runtimeSettingsFetchTime,
-        description: Util.i18n.formatDateTime(report.fetchTime)
+        description: Util.i18n.formatDateTime(report.fetchTime),
       },
       ...envValues,
       {
+        name: Util.i18n.strings.runtimeSettingsChannel,
+        description: report.configSettings.channel,
+      },
+      {
         name: Util.i18n.strings.runtimeSettingsUA,
-        description: report.userAgent
+        description: report.userAgent,
       },
       {
         name: Util.i18n.strings.runtimeSettingsUANetwork,
-        description: report.environment && report.environment.networkUserAgent
+        description: report.environment && report.environment.networkUserAgent,
       },
       {
         name: Util.i18n.strings.runtimeSettingsBenchmark,
         description:
-          report.environment && report.environment.benchmarkIndex.toFixed(0)
-      }
-    ].forEach(runtime => {
+          report.environment && report.environment.benchmarkIndex.toFixed(0),
+      },
+    ].forEach((runtime) => {
       if (!runtime.description) return;
 
-      const item = this._dom.cloneTemplate("#tmpl-lh-env__items", env);
-      this._dom.find(".lh-env__name", item).textContent = runtime.name;
-      this._dom.find(".lh-env__description", item).textContent =
+      const item = this._dom.cloneTemplate('#tmpl-lh-env__items', env);
+      this._dom.find('.lh-env__name', item).textContent = runtime.name;
+      this._dom.find('.lh-env__description', item).textContent =
         runtime.description;
       env.appendChild(item);
     });
 
-    this._dom.find(".lh-footer__version_issue", footer).textContent =
+    this._dom.find('.lh-footer__version_issue', footer).textContent =
       Util.i18n.strings.footerIssue;
-    this._dom.find(".lh-footer__version", footer).textContent =
+    this._dom.find('.lh-footer__version', footer).textContent =
       report.lighthouseVersion;
     return footer;
   }
@@ -176,19 +178,19 @@ class ReportRenderer {
    */
   _renderReportWarnings(report) {
     if (!report.runWarnings || report.runWarnings.length === 0) {
-      return this._dom.createElement("div");
+      return this._dom.createElement('div');
     }
 
     const container = this._dom.cloneTemplate(
-      "#tmpl-lh-warnings--toplevel",
+      '#tmpl-lh-warnings--toplevel',
       this._templateContext
     );
-    const message = this._dom.find(".lh-warnings__msg", container);
+    const message = this._dom.find('.lh-warnings__msg', container);
     message.textContent = Util.i18n.strings.toplevelWarningsMessage;
 
-    const warnings = this._dom.find("ul", container);
+    const warnings = this._dom.find('ul', container);
     for (const warningString of report.runWarnings) {
-      const warning = warnings.appendChild(this._dom.createElement("li"));
+      const warning = warnings.appendChild(this._dom.createElement('li'));
       warning.textContent = warningString;
     }
 
@@ -199,7 +201,7 @@ class ReportRenderer {
    * @param {LH.ReportResult} report
    * @param {CategoryRenderer} categoryRenderer
    * @param {Record<string, CategoryRenderer>} specificCategoryRenderers
-   * @return {DocumentFragment[]}
+   * @return {!DocumentFragment[]}
    */
   _renderScoreGauges(report, categoryRenderer, specificCategoryRenderers) {
     // Group gauges in this order: default, pwa, plugins.
@@ -236,15 +238,16 @@ class ReportRenderer {
 
   /**
    * @param {LH.ReportResult} report
-   * @return {DocumentFragment}
+   * @return {!DocumentFragment}
    */
   _renderReport(report) {
     const i18n = new I18n(report.configSettings.locale, {
       // Set missing renderer strings to default (english) values.
       ...Util.UIStrings,
-      ...report.i18n.rendererFormattedStrings
+      ...report.i18n.rendererFormattedStrings,
     });
     Util.i18n = i18n;
+    Util.reportJson = report;
 
     const detailsRenderer = new DetailsRenderer(this._dom);
     const categoryRenderer = new CategoryRenderer(this._dom, detailsRenderer);
@@ -253,34 +256,34 @@ class ReportRenderer {
     /** @type {Record<string, CategoryRenderer>} */
     const specificCategoryRenderers = {
       performance: new PerformanceCategoryRenderer(this._dom, detailsRenderer),
-      pwa: new PwaCategoryRenderer(this._dom, detailsRenderer)
+      pwa: new PwaCategoryRenderer(this._dom, detailsRenderer),
     };
-    Object.values(specificCategoryRenderers).forEach(renderer => {
+    Object.values(specificCategoryRenderers).forEach((renderer) => {
       renderer.setTemplateContext(this._templateContext);
     });
 
-    const headerContainer = this._dom.createElement("div");
+    const headerContainer = this._dom.createElement('div');
     headerContainer.appendChild(this._renderReportHeader());
 
-    const reportContainer = this._dom.createElement("div", "lh-container");
-    const reportSection = this._dom.createElement("div", "lh-report");
+    const reportContainer = this._dom.createElement('div', 'lh-container');
+    const reportSection = this._dom.createElement('div', 'lh-report');
     reportSection.appendChild(this._renderReportWarnings(report));
 
     let scoreHeader;
     const isSoloCategory = Object.keys(report.categories).length === 1;
     if (!isSoloCategory) {
-      scoreHeader = this._dom.createElement("div", "lh-scores-header");
+      scoreHeader = this._dom.createElement('div', 'lh-scores-header');
     } else {
-      headerContainer.classList.add("lh-header--solo-category");
+      headerContainer.classList.add('lh-header--solo-category');
     }
 
     if (scoreHeader) {
       const scoreScale = this._dom.cloneTemplate(
-        "#tmpl-lh-scorescale",
+        '#tmpl-lh-scorescale',
         this._templateContext
       );
       const scoresContainer = this._dom.find(
-        ".lh-scores-container",
+        '.lh-scores-container',
         headerContainer
       );
       scoreHeader.append(
@@ -293,7 +296,7 @@ class ReportRenderer {
       scoresContainer.appendChild(scoreHeader);
       scoresContainer.appendChild(scoreScale);
 
-      const stickyHeader = this._dom.createElement("div", "lh-sticky-header");
+      const stickyHeader = this._dom.createElement('div', 'lh-sticky-header');
       stickyHeader.append(
         ...this._renderScoreGauges(
           report,
@@ -305,7 +308,7 @@ class ReportRenderer {
     }
 
     const categories = reportSection.appendChild(
-      this._dom.createElement("div", "lh-categories")
+      this._dom.createElement('div', 'lh-categories')
     );
     for (const category of Object.values(report.categories)) {
       const renderer =
@@ -314,8 +317,8 @@ class ReportRenderer {
       // .lh-category within has the max-width: var(--report-width);
       const wrapper = renderer.dom.createChildOf(
         categories,
-        "div",
-        "lh-category-wrapper"
+        'div',
+        'lh-category-wrapper'
       );
       wrapper.appendChild(renderer.render(category, report.categoryGroups));
     }
@@ -333,9 +336,4 @@ class ReportRenderer {
   }
 }
 
-// if (typeof module !== "undefined" && module.exports) {
-//   module.exports = ReportRenderer;
-// } else {
-//   self.ReportRenderer = ReportRenderer;
-// }
 export default ReportRenderer;

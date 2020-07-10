@@ -1,14 +1,14 @@
 /**
- * @license Copyright 2020 Google Inc. All Rights Reserved.
+ * @license Copyright 2020 The Lighthouse Authors. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
-"use strict";
+'use strict';
 
 /* globals self, URL */
 
 // Not named `NBSP` because that creates a duplicate identifier (util.js).
-const NBSP2 = "\xa0";
+const NBSP2 = '\xa0';
 
 class I18n {
   /**
@@ -17,7 +17,7 @@ class I18n {
    */
   constructor(locale, strings) {
     // When testing, use a locale with more exciting numeric formatting.
-    if (locale === "en-XA") locale = "de";
+    if (locale === 'en-XA') locale = 'de';
 
     this._numberDateLocale = locale;
     this._numberFormatter = new Intl.NumberFormat(locale);
@@ -44,11 +44,23 @@ class I18n {
    * @param {number=} granularity Controls how coarse the displayed value is, defaults to 0.1
    * @return {string}
    */
-  formatBytesToKB(size, granularity = 0.1) {
+  formatBytesToKiB(size, granularity = 0.1) {
     const kbs = this._numberFormatter.format(
       Math.round(size / 1024 / granularity) * granularity
     );
-    return `${kbs}${NBSP2}KB`;
+    return `${kbs}${NBSP2}KiB`;
+  }
+
+  /**
+   * @param {number} size
+   * @param {number=} granularity Controls how coarse the displayed value is, defaults to 0.1
+   * @return {string}
+   */
+  formatBytes(size, granularity = 1) {
+    const kbs = this._numberFormatter.format(
+      Math.round(size / granularity) * granularity
+    );
+    return `${kbs}${NBSP2}bytes`;
   }
 
   /**
@@ -79,20 +91,20 @@ class I18n {
   formatDateTime(date) {
     /** @type {Intl.DateTimeFormatOptions} */
     const options = {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      timeZoneName: "short"
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      timeZoneName: 'short',
     };
     let formatter = new Intl.DateTimeFormat(this._numberDateLocale, options);
 
     // Force UTC if runtime timezone could not be detected.
     // See https://github.com/GoogleChrome/lighthouse/issues/1056
     const tz = formatter.resolvedOptions().timeZone;
-    if (!tz || tz.toLowerCase() === "etc/unknown") {
-      options.timeZone = "UTC";
+    if (!tz || tz.toLowerCase() === 'etc/unknown') {
+      options.timeZone = 'UTC';
       formatter = new Intl.DateTimeFormat(this._numberDateLocale, options);
     }
     return formatter.format(new Date(date));
@@ -105,7 +117,7 @@ class I18n {
   formatDuration(timeInMilliseconds) {
     let timeInSeconds = timeInMilliseconds / 1000;
     if (Math.round(timeInSeconds) === 0) {
-      return "None";
+      return 'None';
     }
 
     /** @type {Array<string>} */
@@ -114,10 +126,10 @@ class I18n {
       d: 60 * 60 * 24,
       h: 60 * 60,
       m: 60,
-      s: 1
+      s: 1,
     });
 
-    Object.keys(unitLabels).forEach(label => {
+    Object.keys(unitLabels).forEach((label) => {
       const unit = unitLabels[label];
       const numberOfUnits = Math.floor(timeInSeconds / unit);
       if (numberOfUnits > 0) {
@@ -126,14 +138,8 @@ class I18n {
       }
     });
 
-    return parts.join(" ");
+    return parts.join(' ');
   }
 }
-
-// if (typeof module !== 'undefined' && module.exports) {
-//   module.exports = I18n;
-// } else {
-//   self.I18n = I18n;
-// }
 
 export default I18n;

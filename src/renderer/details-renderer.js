@@ -1,10 +1,6 @@
-// eslint-disable-next-line
-import Util from "./util";
-import CriticalRequestChainRenderer from "./crc-details-renderer";
-
 /**
  * @license
- * Copyright 2017 Google Inc. All Rights Reserved.
+ * Copyright 2017 The Lighthouse Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +14,16 @@ import CriticalRequestChainRenderer from "./crc-details-renderer";
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-("use strict");
+'use strict';
+
+import Util from './util.js';
+import CriticalRequestChainRenderer from './crc-details-renderer.js';
 
 /* globals self CriticalRequestChainRenderer SnippetRenderer Util URL */
 
 /** @typedef {import('./dom.js')} DOM */
 
-const URL_PREFIXES = ["http://", "https://", "data:"];
+const URL_PREFIXES = ['http://', 'https://', 'data:'];
 
 class DetailsRenderer {
   /**
@@ -49,25 +48,25 @@ class DetailsRenderer {
    */
   render(details) {
     switch (details.type) {
-      case "filmstrip":
+      case 'filmstrip':
         return this._renderFilmstrip(details);
-      case "list":
+      case 'list':
         return this._renderList(details);
-      case "table":
+      case 'table':
         return this._renderTable(details);
-      case "criticalrequestchain":
+      case 'criticalrequestchain':
         return CriticalRequestChainRenderer.render(
           this._dom,
           this._templateContext,
           details,
           this
         );
-      case "opportunity":
+      case 'opportunity':
         return this._renderTable(details);
 
       // Internal-only details, not for rendering.
-      case "screenshot":
-      case "debugdata":
+      case 'screenshot':
+      case 'debugdata':
         return null;
 
       default: {
@@ -84,8 +83,14 @@ class DetailsRenderer {
    */
   _renderBytes(details) {
     // TODO: handle displayUnit once we have something other than 'kb'
-    const value = Util.i18n.formatBytesToKB(details.value, details.granularity);
-    return this._renderText(value);
+    // Note that 'kb' is historical and actually represents KiB.
+    const value = Util.i18n.formatBytesToKiB(
+      details.value,
+      details.granularity
+    );
+    const textEl = this._renderText(value);
+    textEl.title = Util.i18n.formatBytes(details.value);
+    return textEl;
   }
 
   /**
@@ -97,7 +102,7 @@ class DetailsRenderer {
       details.value,
       details.granularity
     );
-    if (details.displayUnit === "duration") {
+    if (details.displayUnit === 'duration') {
       value = Util.i18n.formatDuration(details.value);
     }
 
@@ -116,19 +121,19 @@ class DetailsRenderer {
     let title;
     try {
       const parsed = Util.parseURL(url);
-      displayedPath = parsed.file === "/" ? parsed.origin : parsed.file;
-      displayedHost = parsed.file === "/" ? "" : `(${parsed.hostname})`;
+      displayedPath = parsed.file === '/' ? parsed.origin : parsed.file;
+      displayedHost = parsed.file === '/' ? '' : `(${parsed.hostname})`;
       title = url;
     } catch (e) {
       displayedPath = url;
     }
 
-    const element = this._dom.createElement("div", "lh-text__url");
+    const element = this._dom.createElement('div', 'lh-text__url');
     element.appendChild(this._renderLink({ text: displayedPath, url }));
 
     if (displayedHost) {
       const hostElem = this._renderText(displayedHost);
-      hostElem.classList.add("lh-text__url-host");
+      hostElem.classList.add('lh-text__url-host');
       element.appendChild(hostElem);
     }
 
@@ -145,7 +150,7 @@ class DetailsRenderer {
    * @return {Element}
    */
   _renderLink(details) {
-    const allowedProtocols = ["https:", "http:"];
+    const allowedProtocols = ['https:', 'http:'];
     let url;
     try {
       url = new URL(details.url);
@@ -156,9 +161,9 @@ class DetailsRenderer {
       return this._renderText(details.text);
     }
 
-    const a = this._dom.createElement("a");
-    a.rel = "noopener";
-    a.target = "_blank";
+    const a = this._dom.createElement('a');
+    a.rel = 'noopener';
+    a.target = '_blank';
     a.textContent = details.text;
     a.href = url.href;
 
@@ -167,21 +172,22 @@ class DetailsRenderer {
 
   /**
    * @param {string} text
-   * @return {Element}
+   * @return {HTMLDivElement}
    */
   _renderText(text) {
-    const element = this._dom.createElement("div", "lh-text");
+    const element = this._dom.createElement('div', 'lh-text');
     element.textContent = text;
     return element;
   }
 
   /**
-   * @param {string} text
+   * @param {{value: number, granularity?: number}} details
    * @return {Element}
    */
-  _renderNumeric(text) {
-    const element = this._dom.createElement("div", "lh-numeric");
-    element.textContent = text;
+  _renderNumeric(details) {
+    const value = Util.i18n.formatNumber(details.value, details.granularity);
+    const element = this._dom.createElement('div', 'lh-numeric');
+    element.textContent = value;
     return element;
   }
 
@@ -191,11 +197,11 @@ class DetailsRenderer {
    * @return {Element}
    */
   _renderThumbnail(details) {
-    const element = this._dom.createElement("img", "lh-thumbnail");
+    const element = this._dom.createElement('img', 'lh-thumbnail');
     const strValue = details;
     element.src = strValue;
     element.title = strValue;
-    element.alt = "";
+    element.alt = '';
     return element;
   }
 
@@ -206,12 +212,12 @@ class DetailsRenderer {
   _renderUnknown(type, value) {
     // eslint-disable-next-line no-console
     console.error(`Unknown details type: ${type}`, value);
-    const element = this._dom.createElement("details", "lh-unknown");
-    this._dom.createChildOf(element, "summary").textContent =
+    const element = this._dom.createElement('details', 'lh-unknown');
+    this._dom.createChildOf(element, 'summary').textContent =
       `We don't know how to render audit details of type \`${type}\`. ` +
-      "The Lighthouse version that collected this data is likely newer than the Lighthouse " +
-      "version of the report renderer. Expand for the raw JSON.";
-    this._dom.createChildOf(element, "pre").textContent = JSON.stringify(
+      'The Lighthouse version that collected this data is likely newer than the Lighthouse ' +
+      'version of the report renderer. Expand for the raw JSON.';
+    this._dom.createChildOf(element, 'pre').textContent = JSON.stringify(
       value,
       null,
       2
@@ -223,32 +229,32 @@ class DetailsRenderer {
    * Render a details item value for embedding in a table. Renders the value
    * based on the heading's valueType, unless the value itself has a `type`
    * property to override it.
-   * @param {LH.Audit.Details.Value} value
+   * @param {LH.Audit.Details.ItemValue} value
    * @param {LH.Audit.Details.OpportunityColumnHeading} heading
    * @return {Element|null}
    */
   _renderTableValue(value, heading) {
-    if (typeof value === "undefined" || value === null) {
+    if (value === undefined || value === null) {
       return null;
     }
 
     // First deal with the possible object forms of value.
-    if (typeof value === "object") {
+    if (typeof value === 'object') {
       // The value's type overrides the heading's for this column.
       switch (value.type) {
-        case "code": {
+        case 'code': {
           return this._renderCode(value.value);
         }
-        case "link": {
+        case 'link': {
           return this._renderLink(value);
         }
-        case "node": {
+        case 'node': {
           return this.renderNode(value);
         }
-        case "source-location": {
+        case 'source-location': {
           return this.renderSourceLocation(value);
         }
-        case "url": {
+        case 'url': {
           return this.renderTextURL(value.value);
         }
         default: {
@@ -259,44 +265,47 @@ class DetailsRenderer {
 
     // Next, deal with primitives.
     switch (heading.valueType) {
-      case "bytes": {
+      case 'bytes': {
         const numValue = Number(value);
         return this._renderBytes({
           value: numValue,
-          granularity: heading.granularity
+          granularity: heading.granularity,
         });
       }
-      case "code": {
+      case 'code': {
         const strValue = String(value);
         return this._renderCode(strValue);
       }
-      case "ms": {
+      case 'ms': {
         const msValue = {
           value: Number(value),
           granularity: heading.granularity,
-          displayUnit: heading.displayUnit
+          displayUnit: heading.displayUnit,
         };
         return this._renderMilliseconds(msValue);
       }
-      case "numeric": {
-        const strValue = String(value);
-        return this._renderNumeric(strValue);
+      case 'numeric': {
+        const numValue = Number(value);
+        return this._renderNumeric({
+          value: numValue,
+          granularity: heading.granularity,
+        });
       }
-      case "text": {
+      case 'text': {
         const strValue = String(value);
         return this._renderText(strValue);
       }
-      case "thumbnail": {
+      case 'thumbnail': {
         const strValue = String(value);
         return this._renderThumbnail(strValue);
       }
-      case "timespanMs": {
+      case 'timespanMs': {
         const numValue = Number(value);
         return this._renderMilliseconds({ value: numValue });
       }
-      case "url": {
+      case 'url': {
         const strValue = String(value);
-        if (URL_PREFIXES.some(prefix => strValue.startsWith(prefix))) {
+        if (URL_PREFIXES.some((prefix) => strValue.startsWith(prefix))) {
           return this.renderTextURL(strValue);
         } else {
           // Fall back to <pre> rendering if not actually a URL.
@@ -317,11 +326,11 @@ class DetailsRenderer {
    * @return {Array<LH.Audit.Details.OpportunityColumnHeading>}
    */
   _getCanonicalizedHeadingsFromTable(tableLike) {
-    if (tableLike.type === "opportunity") {
+    if (tableLike.type === 'opportunity') {
       return tableLike.headings;
     }
 
-    return tableLike.headings.map(heading =>
+    return tableLike.headings.map((heading) =>
       this._getCanonicalizedHeading(heading)
     );
   }
@@ -334,36 +343,122 @@ class DetailsRenderer {
    * @return {LH.Audit.Details.OpportunityColumnHeading}
    */
   _getCanonicalizedHeading(heading) {
-    let subRows;
-    if (heading.subRows) {
-      // @ts-ignore: It's ok that there is no text.
-      subRows = this._getCanonicalizedHeading(heading.subRows);
+    let subItemsHeading;
+    if (heading.subItemsHeading) {
+      subItemsHeading = this._getCanonicalizedsubItemsHeading(
+        heading.subItemsHeading,
+        heading
+      );
     }
 
     return {
       key: heading.key,
       valueType: heading.itemType,
-      subRows,
+      subItemsHeading,
       label: heading.text,
       displayUnit: heading.displayUnit,
-      granularity: heading.granularity
+      granularity: heading.granularity,
     };
   }
 
   /**
-   * @param {LH.Audit.Details.Value[]} values
-   * @param {LH.Audit.Details.OpportunityColumnHeading} heading
-   * @return {Element}
+   * @param {Exclude<LH.Audit.Details.TableColumnHeading['subItemsHeading'], undefined>} subItemsHeading
+   * @param {LH.Audit.Details.TableColumnHeading} parentHeading
+   * @return {LH.Audit.Details.OpportunityColumnHeading['subItemsHeading']}
    */
-  _renderSubRows(values, heading) {
-    const subRowsElement = this._dom.createElement("div", "lh-sub-rows");
-    for (const childValue of values) {
-      const subRowElement = this._renderTableValue(childValue, heading);
-      if (!subRowElement) continue;
-      subRowElement.classList.add("lh-sub-row");
-      subRowsElement.appendChild(subRowElement);
+  _getCanonicalizedsubItemsHeading(subItemsHeading, parentHeading) {
+    // Low-friction way to prevent commiting a falsy key (which is never allowed for
+    // a subItemsHeading) from passing in CI.
+    if (!subItemsHeading.key) {
+      // eslint-disable-next-line no-console
+      console.warn('key should not be null');
     }
-    return subRowsElement;
+
+    return {
+      key: subItemsHeading.key || '',
+      valueType: subItemsHeading.itemType || parentHeading.itemType,
+      granularity: subItemsHeading.granularity || parentHeading.granularity,
+      displayUnit: subItemsHeading.displayUnit || parentHeading.displayUnit,
+    };
+  }
+
+  /**
+   * Returns a new heading where the values are defined first by `heading.subItemsHeading`,
+   * and secondly by `heading`. If there is no subItemsHeading, returns null, which will
+   * be rendered as an empty column.
+   * @param {LH.Audit.Details.OpportunityColumnHeading} heading
+   * @return {LH.Audit.Details.OpportunityColumnHeading | null}
+   */
+  _getDerivedsubItemsHeading(heading) {
+    if (!heading.subItemsHeading) return null;
+    return {
+      key: heading.subItemsHeading.key || '',
+      valueType: heading.subItemsHeading.valueType || heading.valueType,
+      granularity: heading.subItemsHeading.granularity || heading.granularity,
+      displayUnit: heading.subItemsHeading.displayUnit || heading.displayUnit,
+      label: '',
+    };
+  }
+
+  /**
+   * @param {LH.Audit.Details.OpportunityItem | LH.Audit.Details.TableItem} item
+   * @param {(LH.Audit.Details.OpportunityColumnHeading | null)[]} headings
+   */
+  _renderTableRow(item, headings) {
+    const rowElem = this._dom.createElement('tr');
+
+    for (const heading of headings) {
+      // Empty cell if no heading or heading key for this column.
+      if (!heading || !heading.key) {
+        this._dom.createChildOf(rowElem, 'td', 'lh-table-column--empty');
+        continue;
+      }
+
+      const value = item[heading.key];
+      let valueElement;
+      if (value !== undefined && value !== null) {
+        valueElement = this._renderTableValue(value, heading);
+      }
+
+      if (valueElement) {
+        const classes = `lh-table-column--${heading.valueType}`;
+        this._dom
+          .createChildOf(rowElem, 'td', classes)
+          .appendChild(valueElement);
+      } else {
+        // Empty cell is rendered for a column if:
+        // - the pair is null
+        // - the heading key is null
+        // - the value is undefined/null
+        this._dom.createChildOf(rowElem, 'td', 'lh-table-column--empty');
+      }
+    }
+
+    return rowElem;
+  }
+
+  /**
+   * Renders one or more rows from a details table item. A single table item can
+   * expand into multiple rows, if there is a subItemsHeading.
+   * @param {LH.Audit.Details.OpportunityItem | LH.Audit.Details.TableItem} item
+   * @param {LH.Audit.Details.OpportunityColumnHeading[]} headings
+   */
+  _renderTableRowsFromItem(item, headings) {
+    const fragment = this._dom.createFragment();
+    fragment.append(this._renderTableRow(item, headings));
+
+    if (!item.subItems) return fragment;
+
+    const subItemsHeadings = headings.map(this._getDerivedsubItemsHeading);
+    if (!subItemsHeadings.some(Boolean)) return fragment;
+
+    for (const subItem of item.subItems.items) {
+      const rowEl = this._renderTableRow(subItem, subItemsHeadings);
+      rowEl.classList.add('lh-sub-item-row');
+      fragment.append(rowEl);
+    }
+
+    return fragment;
   }
 
   /**
@@ -371,59 +466,34 @@ class DetailsRenderer {
    * @return {Element}
    */
   _renderTable(details) {
-    if (!details.items.length) return this._dom.createElement("span");
+    if (!details.items.length) return this._dom.createElement('span');
 
-    const tableElem = this._dom.createElement("table", "lh-table");
-    const theadElem = this._dom.createChildOf(tableElem, "thead");
-    const theadTrElem = this._dom.createChildOf(theadElem, "tr");
+    const tableElem = this._dom.createElement('table', 'lh-table');
+    const theadElem = this._dom.createChildOf(tableElem, 'thead');
+    const theadTrElem = this._dom.createChildOf(theadElem, 'tr');
 
     const headings = this._getCanonicalizedHeadingsFromTable(details);
 
     for (const heading of headings) {
-      const valueType = heading.valueType || "text";
+      const valueType = heading.valueType || 'text';
       const classes = `lh-table-column--${valueType}`;
-      const labelEl = this._dom.createElement("div", "lh-text");
+      const labelEl = this._dom.createElement('div', 'lh-text');
       labelEl.textContent = heading.label;
-      this._dom.createChildOf(theadTrElem, "th", classes).appendChild(labelEl);
+      this._dom.createChildOf(theadTrElem, 'th', classes).appendChild(labelEl);
     }
 
-    const tbodyElem = this._dom.createChildOf(tableElem, "tbody");
-    for (const row of details.items) {
-      const rowElem = this._dom.createChildOf(tbodyElem, "tr");
-      for (const heading of headings) {
-        const valueFragment = this._dom.createFragment();
-
-        const value = row[heading.key];
-        const valueElement =
-          value !== undefined &&
-          !Array.isArray(value) &&
-          this._renderTableValue(value, heading);
-        if (valueElement) valueFragment.appendChild(valueElement);
-
-        if (heading.subRows) {
-          const subRowsHeading = {
-            key: heading.subRows.key,
-            valueType: heading.subRows.valueType || heading.valueType,
-            granularity: heading.subRows.granularity || heading.granularity,
-            displayUnit: heading.subRows.displayUnit || heading.displayUnit,
-            label: ""
-          };
-          const values = row[subRowsHeading.key];
-          if (!Array.isArray(values)) continue;
-          const subRowsElement = this._renderSubRows(values, subRowsHeading);
-          valueFragment.appendChild(subRowsElement);
-        }
-
-        if (valueFragment.childElementCount) {
-          const classes = `lh-table-column--${heading.valueType}`;
-          this._dom
-            .createChildOf(rowElem, "td", classes)
-            .appendChild(valueFragment);
-        } else {
-          this._dom.createChildOf(rowElem, "td", "lh-table-column--empty");
-        }
+    const tbodyElem = this._dom.createChildOf(tableElem, 'tbody');
+    let even = true;
+    for (const item of details.items) {
+      const rowsFragment = this._renderTableRowsFromItem(item, headings);
+      for (const rowEl of this._dom.findAll('tr', rowsFragment)) {
+        // For zebra styling.
+        rowEl.classList.add(even ? 'lh-row--even' : 'lh-row--odd');
       }
+      even = !even;
+      tbodyElem.append(rowsFragment);
     }
+
     return tableElem;
   }
 
@@ -432,9 +502,9 @@ class DetailsRenderer {
    * @return {Element}
    */
   _renderList(details) {
-    const listContainer = this._dom.createElement("div", "lh-list");
+    const listContainer = this._dom.createElement('div', 'lh-list');
 
-    details.items.forEach(item => {
+    details.items.forEach((item) => {
       const snippetEl = SnippetRenderer.render(
         this._dom,
         this._templateContext,
@@ -450,27 +520,26 @@ class DetailsRenderer {
   /**
    * @param {LH.Audit.Details.NodeValue} item
    * @return {Element}
-   * @protected
    */
   renderNode(item) {
-    const element = this._dom.createElement("span", "lh-node");
+    const element = this._dom.createElement('span', 'lh-node');
     if (item.nodeLabel) {
-      const nodeLabelEl = this._dom.createElement("div");
+      const nodeLabelEl = this._dom.createElement('div');
       nodeLabelEl.textContent = item.nodeLabel;
       element.appendChild(nodeLabelEl);
     }
     if (item.snippet) {
-      const snippetEl = this._dom.createElement("div");
-      snippetEl.classList.add("lh-node__snippet");
+      const snippetEl = this._dom.createElement('div');
+      snippetEl.classList.add('lh-node__snippet');
       snippetEl.textContent = item.snippet;
       element.appendChild(snippetEl);
     }
     if (item.selector) {
       element.title = item.selector;
     }
-    if (item.path) element.setAttribute("data-path", item.path);
-    if (item.selector) element.setAttribute("data-selector", item.selector);
-    if (item.snippet) element.setAttribute("data-snippet", item.snippet);
+    if (item.path) element.setAttribute('data-path', item.path);
+    if (item.selector) element.setAttribute('data-selector', item.selector);
+    if (item.snippet) element.setAttribute('data-snippet', item.snippet);
 
     return element;
   }
@@ -490,20 +559,20 @@ class DetailsRenderer {
     const column = item.column;
 
     let element;
-    if (item.urlProvider === "network") {
+    if (item.urlProvider === 'network') {
       element = this.renderTextURL(item.url);
-      this._dom.find("a", element).textContent += `:${line}:${column}`;
+      this._dom.find('a', element).textContent += `:${line}:${column}`;
     } else {
       element = this._renderText(
         `${item.url}:${line}:${column} (from sourceURL)`
       );
     }
 
-    element.classList.add("lh-source-location");
-    element.setAttribute("data-source-url", item.url);
+    element.classList.add('lh-source-location');
+    element.setAttribute('data-source-url', item.url);
     // DevTools expects zero-indexed lines.
-    element.setAttribute("data-source-line", String(item.line));
-    element.setAttribute("data-source-column", String(item.column));
+    element.setAttribute('data-source-line', String(item.line));
+    element.setAttribute('data-source-column', String(item.column));
     return element;
   }
 
@@ -512,17 +581,17 @@ class DetailsRenderer {
    * @return {Element}
    */
   _renderFilmstrip(details) {
-    const filmstripEl = this._dom.createElement("div", "lh-filmstrip");
+    const filmstripEl = this._dom.createElement('div', 'lh-filmstrip');
 
     for (const thumbnail of details.items) {
       const frameEl = this._dom.createChildOf(
         filmstripEl,
-        "div",
-        "lh-filmstrip__frame"
+        'div',
+        'lh-filmstrip__frame'
       );
-      this._dom.createChildOf(frameEl, "img", "lh-filmstrip__thumbnail", {
+      this._dom.createChildOf(frameEl, 'img', 'lh-filmstrip__thumbnail', {
         src: thumbnail.data,
-        alt: `Screenshot`
+        alt: `Screenshot`,
       });
     }
     return filmstripEl;
@@ -533,16 +602,10 @@ class DetailsRenderer {
    * @return {Element}
    */
   _renderCode(text) {
-    const pre = this._dom.createElement("pre", "lh-code");
+    const pre = this._dom.createElement('pre', 'lh-code');
     pre.textContent = text;
     return pre;
   }
 }
-
-// if (typeof module !== 'undefined' && module.exports) {
-//   module.exports = DetailsRenderer;
-// } else {
-//   self.DetailsRenderer = DetailsRenderer;
-// }
 
 export default DetailsRenderer;

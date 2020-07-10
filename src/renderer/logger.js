@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2017 Google Inc. All Rights Reserved.
+ * Copyright 2017 The Lighthouse Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-"use strict";
+'use strict';
 
 /**
  * Logs messages via a UI butter.
@@ -39,10 +39,10 @@ class Logger {
     this._id && clearTimeout(this._id);
 
     this.el.textContent = msg;
-    this.el.classList.add("show");
+    this.el.classList.add('show');
     if (autoHide) {
-      this._id = setTimeout(_ => {
-        this.el.classList.remove("show");
+      this._id = setTimeout((_) => {
+        this.el.classList.remove('show');
       }, 7000);
     }
   }
@@ -51,7 +51,7 @@ class Logger {
    * @param {string} msg
    */
   warn(msg) {
-    this.log("Warning: " + msg);
+    this.log('Warning: ' + msg);
   }
 
   /**
@@ -62,7 +62,7 @@ class Logger {
 
     // Rethrow to make sure it's auditable as an error, but in a setTimeout so page
     // recovers gracefully and user can try loading a report again.
-    setTimeout(_ => {
+    setTimeout((_) => {
       throw new Error(msg);
     }, 0);
   }
@@ -72,12 +72,8 @@ class Logger {
    */
   hide() {
     this._id && clearTimeout(this._id);
-    this.el.classList.remove("show");
+    this.el.classList.remove('show');
   }
 }
-
-// if (typeof module !== 'undefined' && module.exports) {
-//   module.exports = Logger;
-// }
 
 export default Logger;

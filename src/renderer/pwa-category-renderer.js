@@ -1,9 +1,6 @@
-import CategoryRenderer from "./category-renderer";
-import Util from "./util";
-
 /**
  * @license
- * Copyright 2018 Google Inc. All Rights Reserved.
+ * Copyright 2018 The Lighthouse Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +14,10 @@ import Util from "./util";
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-("use strict");
+'use strict';
+
+import CategoryRenderer from './category-renderer';
+import Util from './util';
 
 /* globals self, Util, CategoryRenderer */
 
@@ -26,7 +26,7 @@ import Util from "./util";
  */
 const getUniqueSuffix = (() => {
   let svgSuffix = 0;
-  return function() {
+  return function () {
     return svgSuffix++;
   };
 })();
@@ -38,7 +38,7 @@ class PwaCategoryRenderer extends CategoryRenderer {
    * @return {Element}
    */
   render(category, groupDefinitions = {}) {
-    const categoryElem = this.dom.createElement("div", "lh-category");
+    const categoryElem = this.dom.createElement('div', 'lh-category');
     this.createPermalinkSpan(categoryElem, category.id);
     categoryElem.appendChild(
       this.renderCategoryHeader(category, groupDefinitions)
@@ -49,18 +49,18 @@ class PwaCategoryRenderer extends CategoryRenderer {
     // Regular audits aren't split up into pass/fail/notApplicable clumps, they're
     // all put in a top-level clump that isn't expandable/collapsible.
     const regularAuditRefs = auditRefs.filter(
-      ref => ref.result.scoreDisplayMode !== "manual"
+      (ref) => ref.result.scoreDisplayMode !== 'manual'
     );
     const auditsElem = this._renderAudits(regularAuditRefs, groupDefinitions);
     categoryElem.appendChild(auditsElem);
 
     // Manual audits are still in a manual clump.
     const manualAuditRefs = auditRefs.filter(
-      ref => ref.result.scoreDisplayMode === "manual"
+      (ref) => ref.result.scoreDisplayMode === 'manual'
     );
-    const manualElem = this.renderClump("manual", {
+    const manualElem = this.renderClump('manual', {
       auditRefs: manualAuditRefs,
-      description: category.manualDescription
+      description: category.manualDescription,
     });
     categoryElem.appendChild(manualElem);
 
@@ -79,33 +79,33 @@ class PwaCategoryRenderer extends CategoryRenderer {
     }
 
     const tmpl = this.dom.cloneTemplate(
-      "#tmpl-lh-gauge--pwa",
+      '#tmpl-lh-gauge--pwa',
       this.templateContext
     );
     const wrapper = /** @type {HTMLAnchorElement} */ (this.dom.find(
-      ".lh-gauge--pwa__wrapper",
+      '.lh-gauge--pwa__wrapper',
       tmpl
     ));
     wrapper.href = `#${category.id}`;
 
     // Correct IDs in case multiple instances end up in the page.
-    const svgRoot = tmpl.querySelector("svg");
+    const svgRoot = tmpl.querySelector('svg');
     if (!svgRoot)
-      throw new Error("no SVG element found in PWA score gauge template");
+      throw new Error('no SVG element found in PWA score gauge template');
     PwaCategoryRenderer._makeSvgReferencesUnique(svgRoot);
 
     const allGroups = this._getGroupIds(category.auditRefs);
     const passingGroupIds = this._getPassingGroupIds(category.auditRefs);
 
     if (passingGroupIds.size === allGroups.size) {
-      wrapper.classList.add("lh-badged--all");
+      wrapper.classList.add('lh-badged--all');
     } else {
       for (const passingGroupId of passingGroupIds) {
         wrapper.classList.add(`lh-badged--${passingGroupId}`);
       }
     }
 
-    this.dom.find(".lh-gauge__label", tmpl).textContent = category.title;
+    this.dom.find('.lh-gauge__label', tmpl).textContent = category.title;
     wrapper.title = this._getGaugeTooltip(category.auditRefs, groupDefinitions);
     return tmpl;
   }
@@ -113,12 +113,12 @@ class PwaCategoryRenderer extends CategoryRenderer {
   /**
    * Returns the group IDs found in auditRefs.
    * @param {Array<LH.ReportResult.AuditRef>} auditRefs
-   * @return {Set<string>}
+   * @return {!Set<string>}
    */
   _getGroupIds(auditRefs) {
     const groupIds = auditRefs
-      .map(ref => ref.group)
-      .filter(/** @return {g is string} */ g => !!g);
+      .map((ref) => ref.group)
+      .filter(/** @return {g is string} */ (g) => !!g);
     return new Set(groupIds);
   }
 
@@ -151,9 +151,9 @@ class PwaCategoryRenderer extends CategoryRenderer {
 
     const tips = [];
     for (const groupId of groupIds) {
-      const groupAuditRefs = auditRefs.filter(ref => ref.group === groupId);
+      const groupAuditRefs = auditRefs.filter((ref) => ref.group === groupId);
       const auditCount = groupAuditRefs.length;
-      const passedCount = groupAuditRefs.filter(ref =>
+      const passedCount = groupAuditRefs.filter((ref) =>
         Util.showAsPassed(ref.result)
       ).length;
 
@@ -161,7 +161,7 @@ class PwaCategoryRenderer extends CategoryRenderer {
       tips.push(`${title}: ${passedCount}/${auditCount}`);
     }
 
-    return tips.join(", ");
+    return tips.join(', ');
   }
 
   /**
@@ -184,7 +184,7 @@ class PwaCategoryRenderer extends CategoryRenderer {
         `.lh-audit-group--${groupId}`,
         auditsElem
       );
-      groupElem.classList.add("lh-badged");
+      groupElem.classList.add('lh-badged');
     }
 
     return auditsElem;
@@ -198,11 +198,11 @@ class PwaCategoryRenderer extends CategoryRenderer {
    * @param {SVGElement} svgRoot
    */
   static _makeSvgReferencesUnique(svgRoot) {
-    const defsEl = svgRoot.querySelector("defs");
+    const defsEl = svgRoot.querySelector('defs');
     if (!defsEl) return;
 
     const idSuffix = getUniqueSuffix();
-    const elementsToUpdate = defsEl.querySelectorAll("[id]");
+    const elementsToUpdate = defsEl.querySelectorAll('[id]');
     for (const el of elementsToUpdate) {
       const oldId = el.id;
       const newId = `${oldId}-${idSuffix}`;
@@ -211,22 +211,16 @@ class PwaCategoryRenderer extends CategoryRenderer {
       // Update all <use>s.
       const useEls = svgRoot.querySelectorAll(`use[href="#${oldId}"]`);
       for (const useEl of useEls) {
-        useEl.setAttribute("href", `#${newId}`);
+        useEl.setAttribute('href', `#${newId}`);
       }
 
       // Update all fill="url(#...)"s.
       const fillEls = svgRoot.querySelectorAll(`[fill="url(#${oldId})"]`);
       for (const fillEl of fillEls) {
-        fillEl.setAttribute("fill", `url(#${newId})`);
+        fillEl.setAttribute('fill', `url(#${newId})`);
       }
     }
   }
 }
-
-// if (typeof module !== "undefined" && module.exports) {
-//   module.exports = PwaCategoryRenderer;
-// } else {
-//   self.PwaCategoryRenderer = PwaCategoryRenderer;
-// }
 
 export default PwaCategoryRenderer;

@@ -1,8 +1,6 @@
-import Util from "./util";
-
 /**
  * @license
- * Copyright 2017 Google Inc. All Rights Reserved.
+ * Copyright 2017 The Lighthouse Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +14,9 @@ import Util from "./util";
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-("use strict");
+'use strict';
+
+import Util from './util';
 
 /* globals URL self Util */
 
@@ -30,7 +30,7 @@ class DOM {
     /** @type {Document} */
     this._document = document;
     /** @type {string} */
-    this._lighthouseChannel = "unknown";
+    this._lighthouseChannel = 'unknown';
   }
 
   /**
@@ -47,9 +47,9 @@ class DOM {
     if (className) {
       element.className = className;
     }
-    Object.keys(attrs).forEach(key => {
+    Object.keys(attrs).forEach((key) => {
       const value = attrs[key];
-      if (typeof value !== "undefined") {
+      if (typeof value !== 'undefined') {
         element.setAttribute(key, value);
       }
     });
@@ -57,7 +57,7 @@ class DOM {
   }
 
   /**
-   * @return {DocumentFragment}
+   * @return {!DocumentFragment}
    */
   createFragment() {
     return this._document.createDocumentFragment();
@@ -82,7 +82,7 @@ class DOM {
   /**
    * @param {string} selector
    * @param {ParentNode} context
-   * @return {DocumentFragment} A clone of the template content.
+   * @return {!DocumentFragment} A clone of the template content.
    * @throws {Error}
    */
   cloneTemplate(selector, context) {
@@ -97,10 +97,10 @@ class DOM {
 
     // Prevent duplicate styles in the DOM. After a template has been stamped
     // for the first time, remove the clone's styles so they're not re-added.
-    if (template.hasAttribute("data-stamped")) {
-      this.findAll("style", clone).forEach(style => style.remove());
+    if (template.hasAttribute('data-stamped')) {
+      this.findAll('style', clone).forEach((style) => style.remove());
     }
-    template.setAttribute("data-stamped", "true");
+    template.setAttribute('data-stamped', 'true');
 
     return clone;
   }
@@ -109,8 +109,8 @@ class DOM {
    * Resets the "stamped" state of the templates.
    */
   resetTemplates() {
-    this.findAll("template[data-stamped]", this._document).forEach(t => {
-      t.removeAttribute("data-stamped");
+    this.findAll('template[data-stamped]', this._document).forEach((t) => {
+      t.removeAttribute('data-stamped');
     });
   }
 
@@ -119,7 +119,7 @@ class DOM {
    * @return {Element}
    */
   convertMarkdownLinkSnippets(text) {
-    const element = this.createElement("span");
+    const element = this.createElement('span');
 
     for (const segment of Util.splitMarkdownLink(text)) {
       if (!segment.isLink) {
@@ -131,15 +131,15 @@ class DOM {
       // Otherwise, append any links found.
       const url = new URL(segment.linkHref);
 
-      const DOCS_ORIGINS = ["https://developers.google.com", "https://web.dev"];
+      const DOCS_ORIGINS = ['https://developers.google.com', 'https://web.dev'];
       if (DOCS_ORIGINS.includes(url.origin)) {
-        url.searchParams.set("utm_source", "lighthouse");
-        url.searchParams.set("utm_medium", this._lighthouseChannel);
+        url.searchParams.set('utm_source', 'lighthouse');
+        url.searchParams.set('utm_medium', this._lighthouseChannel);
       }
 
-      const a = this.createElement("a");
-      a.rel = "noopener";
-      a.target = "_blank";
+      const a = this.createElement('a');
+      a.rel = 'noopener';
+      a.target = '_blank';
       a.textContent = segment.text;
       a.href = url.href;
       element.appendChild(a);
@@ -153,11 +153,11 @@ class DOM {
    * @return {Element}
    */
   convertMarkdownCodeSnippets(markdownText) {
-    const element = this.createElement("span");
+    const element = this.createElement('span');
 
     for (const segment of Util.splitMarkdownCodeSpans(markdownText)) {
       if (segment.isCode) {
-        const pre = this.createElement("code");
+        const pre = this.createElement('code');
         pre.textContent = segment.text;
         element.appendChild(pre);
       } else {
@@ -188,7 +188,7 @@ class DOM {
    * @return {boolean}
    */
   isDevTools() {
-    return !!this._document.querySelector(".lh-devtools");
+    return !!this._document.querySelector('.lh-devtools');
   }
 
   /**
@@ -196,7 +196,7 @@ class DOM {
    * nothing matches query.
    * @param {string} query
    * @param {ParentNode} context
-   * @return {HTMLElement}
+   * @return {!HTMLElement}
    */
   find(query, context) {
     /** @type {?HTMLElement} */
@@ -211,17 +211,11 @@ class DOM {
    * Helper for context.querySelectorAll. Returns an Array instead of a NodeList.
    * @param {string} query
    * @param {ParentNode} context
-   * @return {Array<HTMLElement>}
+   * @return {!Array<HTMLElement>}
    */
   findAll(query, context) {
     return Array.from(context.querySelectorAll(query));
   }
 }
-
-// if (typeof module !== "undefined" && module.exports) {
-//   module.exports = DOM;
-// } else {
-//   self.DOM = DOM;
-// }
 
 export default DOM;

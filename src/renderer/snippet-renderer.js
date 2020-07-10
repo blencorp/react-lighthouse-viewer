@@ -1,20 +1,21 @@
 /**
- * @license Copyright 2019 Google Inc. All Rights Reserved.
+ * @license Copyright 2019 The Lighthouse Authors. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
-"use strict";
+'use strict';
 
 /* globals self, Util */
 
 /** @typedef {import('./details-renderer')} DetailsRenderer */
+/** @typedef {import('./dom')} DOM */
 
 /** @enum {number} */
 const LineVisibility = {
   /** Show regardless of whether the snippet is collapsed or expanded */
   ALWAYS: 0,
   WHEN_COLLAPSED: 1,
-  WHEN_EXPANDED: 2
+  WHEN_EXPANDED: 2,
 };
 
 /** @enum {number} */
@@ -26,7 +27,7 @@ const LineContentType = {
   /** Use when some lines are hidden, shows the "..." placeholder */
   PLACEHOLDER: 2,
   /** A message about a line of content or the snippet in general */
-  MESSAGE: 3
+  MESSAGE: 3,
 };
 
 /** @typedef {{
@@ -38,13 +39,13 @@ const LineContentType = {
 }} LineDetails */
 
 const classNamesByContentType = {
-  [LineContentType.CONTENT_NORMAL]: ["lh-snippet__line--content"],
+  [LineContentType.CONTENT_NORMAL]: ['lh-snippet__line--content'],
   [LineContentType.CONTENT_HIGHLIGHTED]: [
-    "lh-snippet__line--content",
-    "lh-snippet__line--content-highlighted"
+    'lh-snippet__line--content',
+    'lh-snippet__line--content-highlighted',
   ],
-  [LineContentType.PLACEHOLDER]: ["lh-snippet__line--placeholder"],
-  [LineContentType.MESSAGE]: ["lh-snippet__line--message"]
+  [LineContentType.PLACEHOLDER]: ['lh-snippet__line--placeholder'],
+  [LineContentType.MESSAGE]: ['lh-snippet__line--message'],
 };
 
 /**
@@ -54,8 +55,8 @@ const classNamesByContentType = {
  */
 function getLineAndPreviousLine(lines, lineNumber) {
   return {
-    line: lines.find(l => l.lineNumber === lineNumber),
-    previousLine: lines.find(l => l.lineNumber === lineNumber - 1)
+    line: lines.find((l) => l.lineNumber === lineNumber),
+    previousLine: lines.find((l) => l.lineNumber === lineNumber - 1),
   };
 }
 
@@ -64,7 +65,7 @@ function getLineAndPreviousLine(lines, lineNumber) {
  * @param {number} lineNumber
  */
 function getMessagesForLineNumber(messages, lineNumber) {
-  return messages.filter(h => h.lineNumber === lineNumber);
+  return messages.filter((h) => h.lineNumber === lineNumber);
 }
 
 /**
@@ -99,36 +100,36 @@ class SnippetRenderer {
     const linesWhenCollapsed = getLinesWhenCollapsed(details);
     const canExpand = linesWhenCollapsed.length < details.lines.length;
 
-    const header = dom.cloneTemplate("#tmpl-lh-snippet__header", tmpl);
-    dom.find(".lh-snippet__title", header).textContent = details.title;
+    const header = dom.cloneTemplate('#tmpl-lh-snippet__header', tmpl);
+    dom.find('.lh-snippet__title', header).textContent = details.title;
 
     const {
       snippetCollapseButtonLabel,
-      snippetExpandButtonLabel
+      snippetExpandButtonLabel,
     } = Util.i18n.strings;
     dom.find(
-      ".lh-snippet__btn-label-collapse",
+      '.lh-snippet__btn-label-collapse',
       header
     ).textContent = snippetCollapseButtonLabel;
     dom.find(
-      ".lh-snippet__btn-label-expand",
+      '.lh-snippet__btn-label-expand',
       header
     ).textContent = snippetExpandButtonLabel;
 
-    const toggleExpandButton = dom.find(".lh-snippet__toggle-expand", header);
+    const toggleExpandButton = dom.find('.lh-snippet__toggle-expand', header);
     // If we're already showing all the available lines of the snippet, we don't need an
     // expand/collapse button and can remove it from the DOM.
     // If we leave the button in though, wire up the click listener to toggle visibility!
     if (!canExpand) {
       toggleExpandButton.remove();
     } else {
-      toggleExpandButton.addEventListener("click", () => toggleExpandedFn());
+      toggleExpandButton.addEventListener('click', () => toggleExpandedFn());
     }
 
     // We only show the source node of the snippet in DevTools because then the user can
     // access the full element detail. Just being able to see the outer HTML isn't very useful.
     if (details.node && dom.isDevTools()) {
-      const nodeContainer = dom.find(".lh-snippet__node", header);
+      const nodeContainer = dom.find('.lh-snippet__node', header);
       nodeContainer.appendChild(detailsRenderer.renderNode(details.node));
     }
 
@@ -147,22 +148,22 @@ class SnippetRenderer {
     tmpl,
     { content, lineNumber, truncated, contentType, visibility }
   ) {
-    const clonedTemplate = dom.cloneTemplate("#tmpl-lh-snippet__line", tmpl);
-    const contentLine = dom.find(".lh-snippet__line", clonedTemplate);
+    const clonedTemplate = dom.cloneTemplate('#tmpl-lh-snippet__line', tmpl);
+    const contentLine = dom.find('.lh-snippet__line', clonedTemplate);
     const { classList } = contentLine;
 
-    classNamesByContentType[contentType].forEach(typeClass =>
+    classNamesByContentType[contentType].forEach((typeClass) =>
       classList.add(typeClass)
     );
 
     if (visibility === LineVisibility.WHEN_COLLAPSED) {
-      classList.add("lh-snippet__show-if-collapsed");
+      classList.add('lh-snippet__show-if-collapsed');
     } else if (visibility === LineVisibility.WHEN_EXPANDED) {
-      classList.add("lh-snippet__show-if-expanded");
+      classList.add('lh-snippet__show-if-expanded');
     }
 
-    const lineContent = content + (truncated ? "…" : "");
-    const lineContentEl = dom.find(".lh-snippet__line code", contentLine);
+    const lineContent = content + (truncated ? '…' : '');
+    const lineContentEl = dom.find('.lh-snippet__line code', contentLine);
     if (contentType === LineContentType.MESSAGE) {
       lineContentEl.appendChild(dom.convertMarkdownLinkSnippets(lineContent));
     } else {
@@ -170,7 +171,7 @@ class SnippetRenderer {
     }
 
     dom.find(
-      ".lh-snippet__line-number",
+      '.lh-snippet__line-number',
       contentLine
     ).textContent = lineNumber.toString();
 
@@ -185,9 +186,9 @@ class SnippetRenderer {
    */
   static renderMessage(dom, tmpl, message) {
     return SnippetRenderer.renderSnippetLine(dom, tmpl, {
-      lineNumber: " ",
+      lineNumber: ' ',
       content: message.message,
-      contentType: LineContentType.MESSAGE
+      contentType: LineContentType.MESSAGE,
     });
   }
 
@@ -199,10 +200,10 @@ class SnippetRenderer {
    */
   static renderOmittedLinesPlaceholder(dom, tmpl, visibility) {
     return SnippetRenderer.renderSnippetLine(dom, tmpl, {
-      lineNumber: "…",
-      content: "",
+      lineNumber: '…',
+      content: '',
       visibility,
-      contentType: LineContentType.PLACEHOLDER
+      contentType: LineContentType.PLACEHOLDER,
     });
   }
 
@@ -213,11 +214,11 @@ class SnippetRenderer {
    * @return {DocumentFragment}
    */
   static renderSnippetContent(dom, tmpl, details) {
-    const template = dom.cloneTemplate("#tmpl-lh-snippet__content", tmpl);
-    const snippetEl = dom.find(".lh-snippet__snippet-inner", template);
+    const template = dom.cloneTemplate('#tmpl-lh-snippet__content', tmpl);
+    const snippetEl = dom.find('.lh-snippet__snippet-inner', template);
 
     // First render messages that don't belong to specific lines
-    details.generalMessages.forEach(m =>
+    details.generalMessages.forEach((m) =>
       snippetEl.append(SnippetRenderer.renderMessage(dom, tmpl, m))
     );
     // Then render the lines and their messages, as well as placeholders where lines are omitted
@@ -249,7 +250,7 @@ class SnippetRenderer {
       const { line, previousLine } = getLineAndPreviousLine(lines, lineNumber);
       const {
         line: lineWhenCollapsed,
-        previousLine: previousLineWhenCollapsed
+        previousLine: previousLineWhenCollapsed,
       } = getLineAndPreviousLine(linesWhenCollapsed, lineNumber);
 
       const showLineWhenCollapsed = !!lineWhenCollapsed;
@@ -287,7 +288,7 @@ class SnippetRenderer {
         // In the collapsed state we don't show omitted lines placeholders around
         // the edges of the snippet
         const hasRenderedAllLinesVisibleWhenCollapsed = !linesWhenCollapsed.some(
-          l => l.lineNumber > lineNumber
+          (l) => l.lineNumber > lineNumber
         );
         const onlyShowWhenExpanded =
           hasRenderedAllLinesVisibleWhenCollapsed || lineNumber === 1;
@@ -317,13 +318,13 @@ class SnippetRenderer {
           : LineContentType.CONTENT_NORMAL,
         visibility: lineWhenCollapsed
           ? LineVisibility.ALWAYS
-          : LineVisibility.WHEN_EXPANDED
+          : LineVisibility.WHEN_EXPANDED,
       });
       lineContainer.append(
         SnippetRenderer.renderSnippetLine(dom, tmpl, contentLineDetails)
       );
 
-      messages.forEach(message => {
+      messages.forEach((message) => {
         lineContainer.append(SnippetRenderer.renderMessage(dom, tmpl, message));
       });
     }
@@ -336,18 +337,18 @@ class SnippetRenderer {
    * @param {ParentNode} templateContext
    * @param {LH.Audit.Details.SnippetValue} details
    * @param {DetailsRenderer} detailsRenderer
-   * @return {Element}
+   * @return {!Element}
    */
   static render(dom, templateContext, details, detailsRenderer) {
-    const tmpl = dom.cloneTemplate("#tmpl-lh-snippet", templateContext);
-    const snippetEl = dom.find(".lh-snippet", tmpl);
+    const tmpl = dom.cloneTemplate('#tmpl-lh-snippet', templateContext);
+    const snippetEl = dom.find('.lh-snippet', tmpl);
 
     const header = SnippetRenderer.renderHeader(
       dom,
       tmpl,
       details,
       detailsRenderer,
-      () => snippetEl.classList.toggle("lh-snippet--expanded")
+      () => snippetEl.classList.toggle('lh-snippet--expanded')
     );
     const content = SnippetRenderer.renderSnippetContent(dom, tmpl, details);
     snippetEl.append(header, content);
@@ -355,12 +356,5 @@ class SnippetRenderer {
     return snippetEl;
   }
 }
-
-// Allow Node require()'ing.
-// if (typeof module !== 'undefined' && module.exports) {
-//   module.exports = SnippetRenderer;
-// } else {
-//   self.SnippetRenderer = SnippetRenderer;
-// }
 
 export default SnippetRenderer;
