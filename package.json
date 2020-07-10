@@ -1,6 +1,6 @@
 {
   "name": "react-lighthouse-viewer",
-  "version": "2.8.0",
+  "version": "6.0.0",
   "description": "A React component used for rendering Lighthouse JSON reports.",
   "main": "dist/index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "transpile": "./node_modules/.bin/babel src -d dist --copy-files",
     "prepublishOnly": "yarn transpile",
     "build": "webpack --mode production",
-    "deploy": "gh-pages -d example/dist",    
+    "deploy": "gh-pages -d example/dist",
     "publish-demo": "yarn prepublishOnly && yarn build && yarn deploy"
   },
   "repository": {
