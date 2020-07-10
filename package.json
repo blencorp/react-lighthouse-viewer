@@ -27,6 +27,10 @@
     "url": "https://github.com/blencorp/react-lighthouse-viewer/issues"
   },
   "homepage": "https://github.com/blencorp/react-lighthouse-viewer#readme",
+  "peerDependencies": {    
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
   "devDependencies": {
     "@babel/cli": "^7.10.4",
     "@babel/core": "^7.10.4",

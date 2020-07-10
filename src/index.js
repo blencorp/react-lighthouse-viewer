@@ -1,52 +1,30 @@
-import React, { Component } from 'react';
-
-import './report-styles.css';
-
+import React from 'react';
 import DOM from './renderer/dom';
 import ReportRenderer from './renderer/report-renderer';
 import ReportUIFeatures from './renderer/report-ui-features';
-import Logger from './renderer/logger';
-
+import './report-styles.css';
 import __html from './templates';
 
 export const Template = () => {
   return <div dangerouslySetInnerHTML={{ __html: __html }} />;
 };
 
-class ReportViewer extends Component {
-  constructor(props) {
-    super(props);
-    document.addEventListener('lh-log', (e) => {
-      const logger = new Logger(document.querySelector('#lh-log'));
-      switch (e.detail.cmd) {
-        case 'log':
-          logger.log(e.detail.msg);
-          break;
-        case 'warn':
-          logger.warn(e.detail.msg);
-          break;
-        case 'error':
-          logger.error(e.detail.msg);
-          break;
-        case 'hide':
-          logger.hide();
-          break;
-        default:
-      }
-    });
-  }
+export default function ReportViewer({
+  id = 'react-lighthouse-viewer',
+  json = {},
+}) {
+  React.useEffect(() => {
+    if (Object.keys(json).length === 0) return;
+    if (json) {
+      generateReport();
+    }
+  }, [json]);
 
-  componentDidMount() {
-    this.generateReport();
-  }
-
-  generateReport() {
-    const { json } = this.props;
-
+  const generateReport = () => {
     const dom = new DOM(document);
     const renderer = new ReportRenderer(dom);
 
-    const container = document.querySelector('main.react-lighthouse-viewer');
+    const container = document.querySelector(`#${id}`);
 
     renderer.renderReport(json, container);
 
@@ -54,19 +32,12 @@ class ReportViewer extends Component {
     // is in the document.
     const features = new ReportUIFeatures(dom);
     features.initFeatures(json);
-  }
+  };
 
-  render() {
-    return (
-      <div className="lh-root lh-vars">
-        <Template />
-        <main className="react-lighthouse-viewer">
-          {/* report populated here */}
-        </main>
-        <div id="lh-log" />
-      </div>
-    );
-  }
+  return (
+    <div className="lh-root lh-vars">
+      <Template />
+      <div id={id} />
+    </div>
+  );
 }
-
-export default ReportViewer;
