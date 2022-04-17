@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import DOM from './renderer/dom';
 import ReportRenderer from './renderer/report-renderer';
 import ReportUIFeatures from './renderer/report-ui-features';
@@ -9,30 +9,32 @@ export const Template = () => {
   return <div dangerouslySetInnerHTML={{ __html: __html }} />;
 };
 
+// return features to re-use
+const generateReport = () => {
+  const dom = new DOM(document);
+  const renderer = new ReportRenderer(dom);
+  const container = document.querySelector(`#${id}`);
+  renderer.renderReport(json, container);
+  const features = new ReportUIFeatures(dom);
+  features.initFeatures(json);
+
+  return features;
+};
+
 export default function ReportViewer({
   id = 'react-lighthouse-viewer',
   json = {},
 }) {
-  React.useEffect(() => {
-    if (Object.keys(json).length === 0) return;
-    if (json) {
-      generateReport();
-    }
+  useEffect(() => {
+    const exist = json && Object.keys(json).length === 0;
+    const features = exist && generateReport();
+
+    return () => {
+      if (features) {
+        features.dropFeatures();
+      }
+    };
   }, [json]);
-
-  const generateReport = () => {
-    const dom = new DOM(document);
-    const renderer = new ReportRenderer(dom);
-
-    const container = document.querySelector(`#${id}`);
-
-    renderer.renderReport(json, container);
-
-    // Hook in JS features and page-level event listeners after the report
-    // is in the document.
-    const features = new ReportUIFeatures(dom);
-    features.initFeatures(json);
-  };
 
   return (
     <div className="lh-root lh-vars">
