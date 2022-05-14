@@ -172,7 +172,7 @@ class ReportUIFeatures {
 
   dropFeatures() {
     const mediaQuery = self.matchMedia('(max-width: 500px)');
-    mediaQuery.removeEventListener(this.onMediaQueryChange);
+    mediaQuery.removeEventListener('change', this.onMediaQueryChange);
   }
 
   /**
@@ -228,7 +228,7 @@ class ReportUIFeatures {
 
   _setupMediaQueryListeners() {
     const mediaQuery = self.matchMedia('(max-width: 500px)');
-    mediaQuery.addListener(this.onMediaQueryChange);
+    mediaQuery.addEventListener('change', this.onMediaQueryChange);
     // Ensure the handler is called on init
     this.onMediaQueryChange(mediaQuery);
   }
