@@ -10,7 +10,7 @@ export const Template = () => {
 };
 
 // return features to re-use
-const generateReport = () => {
+const generateReport = (json, id) => {
   const dom = new DOM(document);
   const renderer = new ReportRenderer(dom);
   const container = document.querySelector(`#${id}`);
@@ -27,14 +27,14 @@ export default function ReportViewer({
 }) {
   useEffect(() => {
     const exist = json && Object.keys(json).length !== 0;
-    const features = exist && generateReport();
+    const features = exist && generateReport(json, id);
 
     return () => {
       if (features) {
         features.dropFeatures();
       }
     };
-  }, [json]);
+  }, [json, id]);
 
   return (
     <div className="lh-root lh-vars">
