@@ -70,9 +70,8 @@ class ReportUIFeatures {
     this.collapseAllDetails = this.collapseAllDetails.bind(this);
     this.expandAllDetails = this.expandAllDetails.bind(this);
     this._toggleDarkTheme = this._toggleDarkTheme.bind(this);
-    this._updateStickyHeaderOnScroll = this._updateStickyHeaderOnScroll.bind(
-      this
-    );
+    this._updateStickyHeaderOnScroll =
+      this._updateStickyHeaderOnScroll.bind(this);
   }
 
   /**
@@ -154,10 +153,9 @@ class ReportUIFeatures {
         )
       );
     if (hasMetricError) {
-      const toggleInputEl = /** @type {HTMLInputElement} */ (this._dom.find(
-        '.lh-metrics-toggle__input',
-        this._document
-      ));
+      const toggleInputEl = /** @type {HTMLInputElement} */ (
+        this._dom.find('.lh-metrics-toggle__input', this._document)
+      );
       toggleInputEl.checked = true;
     }
 
@@ -165,11 +163,16 @@ class ReportUIFeatures {
     for (const node of this._dom.findAll('[data-i18n]', this._dom.document())) {
       // These strings are guaranteed to (at least) have a default English string in Util.UIStrings,
       // so this cannot be undefined as long as `report-ui-features.data-i18n` test passes.
-      const i18nAttr = /** @type {keyof LH.I18NRendererStrings} */ (node.getAttribute(
-        'data-i18n'
-      ));
+      const i18nAttr = /** @type {keyof LH.I18NRendererStrings} */ (
+        node.getAttribute('data-i18n')
+      );
       node.textContent = Util.i18n.strings[i18nAttr];
     }
+  }
+
+  dropFeatures() {
+    const mediaQuery = self.matchMedia('(max-width: 500px)');
+    mediaQuery.removeEventListener('change', this.onMediaQueryChange);
   }
 
   /**
@@ -225,7 +228,7 @@ class ReportUIFeatures {
 
   _setupMediaQueryListeners() {
     const mediaQuery = self.matchMedia('(max-width: 500px)');
-    mediaQuery.addListener(this.onMediaQueryChange);
+    mediaQuery.addEventListener('change', this.onMediaQueryChange);
     // Ensure the handler is called on init
     this.onMediaQueryChange(mediaQuery);
   }
@@ -278,10 +281,9 @@ class ReportUIFeatures {
         '#tmpl-lh-3p-filter',
         this._templateContext
       );
-      const filterInput = /** @type {HTMLInputElement} */ (this._dom.find(
-        'input',
-        filterTemplate
-      ));
+      const filterInput = /** @type {HTMLInputElement} */ (
+        this._dom.find('input', filterTemplate)
+      );
       const id = `lh-3p-filter-label--${index}`;
 
       filterInput.id = id;
@@ -574,10 +576,9 @@ class ReportUIFeatures {
    * open a `<details>` element.
    */
   expandAllDetails() {
-    const details = /** @type {Array<HTMLDetailsElement>} */ (this._dom.findAll(
-      '.lh-categories details',
-      this._document
-    ));
+    const details = /** @type {Array<HTMLDetailsElement>} */ (
+      this._dom.findAll('.lh-categories details', this._document)
+    );
     details.map((detail) => (detail.open = true));
   }
 
@@ -586,10 +587,9 @@ class ReportUIFeatures {
    * open a `<details>` element.
    */
   collapseAllDetails() {
-    const details = /** @type {Array<HTMLDetailsElement>} */ (this._dom.findAll(
-      '.lh-categories details',
-      this._document
-    ));
+    const details = /** @type {Array<HTMLDetailsElement>} */ (
+      this._dom.findAll('.lh-categories details', this._document)
+    );
     details.map((detail) => (detail.open = false));
   }
 
@@ -694,9 +694,8 @@ class ReportUIFeatures {
         : 0;
 
     // Category order matches gauge order in sticky header.
-    const gaugeWrapperEls = this.stickyHeaderEl.querySelectorAll(
-      '.lh-gauge__wrapper'
-    );
+    const gaugeWrapperEls =
+      this.stickyHeaderEl.querySelectorAll('.lh-gauge__wrapper');
     const gaugeToHighlight = gaugeWrapperEls[highlightIndex];
     const origin = gaugeWrapperEls[0].getBoundingClientRect().left;
     const offset = gaugeToHighlight.getBoundingClientRect().left - origin;
@@ -907,10 +906,9 @@ class DropDown {
    */
   _getNextMenuItem(startEl) {
     const nodes = Array.from(this._menuEl.childNodes);
-    return /** @type {HTMLElement} */ (this._getNextSelectableNode(
-      nodes,
-      startEl
-    ));
+    return /** @type {HTMLElement} */ (
+      this._getNextSelectableNode(nodes, startEl)
+    );
   }
 
   /**
@@ -919,10 +917,9 @@ class DropDown {
    */
   _getPreviousMenuItem(startEl) {
     const nodes = Array.from(this._menuEl.childNodes).reverse();
-    return /** @type {HTMLElement} */ (this._getNextSelectableNode(
-      nodes,
-      startEl
-    ));
+    return /** @type {HTMLElement} */ (
+      this._getNextSelectableNode(nodes, startEl)
+    );
   }
 }
 
