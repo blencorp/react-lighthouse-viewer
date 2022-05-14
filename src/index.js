@@ -26,7 +26,7 @@ export default function ReportViewer({
   json = {},
 }) {
   useEffect(() => {
-    const exist = json && Object.keys(json).length === 0;
+    const exist = json && Object.keys(json).length !== 0;
     const features = exist && generateReport();
 
     return () => {
