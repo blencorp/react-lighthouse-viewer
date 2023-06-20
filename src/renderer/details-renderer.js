@@ -561,7 +561,11 @@ class DetailsRenderer {
     let element;
     if (item.urlProvider === 'network') {
       element = this.renderTextURL(item.url);
-      this._dom.find('a', element).textContent += `:${line}:${column}`;
+      try {
+        this._dom.find('a', element).textContent += `:${line}:${column}`;
+      } catch(_) {
+        console.error("unable to create link ", item.url);
+      }
     } else {
       element = this._renderText(
         `${item.url}:${line}:${column} (from sourceURL)`
