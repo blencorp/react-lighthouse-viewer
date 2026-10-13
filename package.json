@@ -1,70 +1,23 @@
 {
-  "name": "react-lighthouse-viewer",
-  "version": "6.0.3",
-  "description": "A React component used for rendering Lighthouse JSON reports.",
-  "main": "dist/index.js",
+  "name": "react-lighthouse-viewer-monorepo",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server --mode development",
-    "transpile": "./node_modules/.bin/babel src -d dist --copy-files",
-    "prepublishOnly": "yarn transpile",
-    "build": "webpack --mode production",
-    "deploy": "gh-pages -d example/dist",
-    "publish-demo": "yarn prepublishOnly && yarn build && yarn deploy"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/blencorp/react-lighthouse-viewer.git"
-  },
-  "keywords": [
-    "lighthouse",
-    "viewer",
-    "react"
-  ],
-  "author": "Naod Yeheyes <naodya@gmail.com>",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/blencorp/react-lighthouse-viewer/issues"
-  },
-  "homepage": "https://github.com/blencorp/react-lighthouse-viewer#readme",
-  "peerDependencies": {
-    "react": ">=16.8.0",
-    "react-dom": ">=16.8.0"
+    "build": "pnpm --filter @blen/react-lighthouse-viewer build",
+    "dev": "pnpm --filter example dev",
+    "lint": "oxlint --type-aware --deny-warnings && oxfmt --check",
+    "format": "oxfmt && oxlint --fix",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @blen/react-lighthouse-viewer test",
+    "check": "pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm --filter @blen/react-lighthouse-viewer check:package && pnpm --filter example build"
   },
   "devDependencies": {
-    "@babel/cli": "^7.10.4",
-    "@babel/core": "^7.10.4",
-    "@babel/preset-env": "^7.10.4",
-    "@babel/preset-react": "^7.10.4",
-    "astroturf": "^0.10.4",
-    "autoprefixer": "^9.8.4",
-    "babel-loader": "^8.1.0",
-    "babel-preset-env": "^1.7.0",
-    "cjs-to-es6": "^1.1.1",
-    "css-loader": "^3.6.0",
-    "extract-text-webpack-plugin": "^3.0.2",
-    "gh-pages": "^3.1.0",
-    "html-webpack-plugin": "^4.3.0",
-    "mini-css-extract-plugin": "^0.9.0",
-    "postcss-loader": "^3.0.0",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "style-loader": "^1.2.1",
-    "webpack": "^4.43.0",
-    "webpack-cli": "^3.3.12",
-    "webpack-dev-server": "^3.11.0"
+    "oxfmt": "0.72.0",
+    "oxlint": "1.87.0",
+    "oxlint-tsgolint": "7.0.2004"
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "engines": {
+    "node": ">=24"
   },
-  "dependencies": {}
+  "packageManager": "pnpm@12.11.2"
 }

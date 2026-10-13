@@ -1,0 +1,55 @@
+name: Lighthouse sync
+
+# Opens a pull request when a new Lighthouse version is on npm. The pull request updates the
+# bundled renderer, the package version and the sample report. Merging it publishes the release.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - id: versions
+        run: |
+          current=$(node -p "require('./packages/react-lighthouse-viewer/package.json').version")
+          latest=$(npm view lighthouse version)
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          if [ "$current" = "$latest" ]; then
+            echo "Already on Lighthouse $latest."
+          else
+            echo "update=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Update Lighthouse
+        if: steps.versions.outputs.update
+        env:
+          LATEST: ${{ steps.versions.outputs.latest }}
+        run: node scripts/sync-lighthouse.ts "$LATEST"
+      - name: Check
+        if: steps.versions.outputs.update
+        run: |
+          pnpm --filter @blen/react-lighthouse-viewer exec playwright install --with-deps chromium
+          pnpm check
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        if: steps.versions.outputs.update
+        with:
+          branch: lighthouse/v${{ steps.versions.outputs.latest }}
+          commit-message: Bundle Lighthouse ${{ steps.versions.outputs.latest }}
+          title: Lighthouse ${{ steps.versions.outputs.latest }}
+          body: |
+            Updates the bundled report renderer to [Lighthouse ${{ steps.versions.outputs.latest }}](https://github.com/GoogleChrome/lighthouse/releases/tag/v${{ steps.versions.outputs.latest }}).
+
+            - Sets the package version to ${{ steps.versions.outputs.latest }}.
+            - Regenerates the latest sample report.
+            - Adds a changelog entry.
+
+            `pnpm check` passed in the workflow run. Merging this pull request publishes ${{ steps.versions.outputs.latest }} to npm.

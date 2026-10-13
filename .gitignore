@@ -1,2 +1,8 @@
 node_modules
 dist
+*.tgz
+.DS_Store
+packages/react-lighthouse-viewer/README.md
+packages/react-lighthouse-viewer/LICENSE
+packages/react-lighthouse-viewer/NOTICE
+.vitest

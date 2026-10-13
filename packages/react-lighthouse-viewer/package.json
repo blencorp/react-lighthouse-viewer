@@ -1,0 +1,68 @@
+{
+  "name": "@blen/react-lighthouse-viewer",
+  "version": "13.5.0",
+  "description": "Render Lighthouse JSON reports in React, using the official Lighthouse report renderer.",
+  "keywords": [
+    "lighthouse",
+    "lighthouse-report",
+    "lighthouse-viewer",
+    "performance",
+    "react",
+    "web-vitals"
+  ],
+  "homepage": "https://blencorp.github.io/react-lighthouse-viewer/",
+  "bugs": "https://github.com/blencorp/react-lighthouse-viewer/issues",
+  "license": "Apache-2.0",
+  "author": "BLEN, Inc. (https://blencorp.com)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blencorp/react-lighthouse-viewer.git",
+    "directory": "packages/react-lighthouse-viewer"
+  },
+  "files": [
+    "dist",
+    "NOTICE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:version": "node scripts/check-version.ts",
+    "check:package": "publint --strict && attw --pack --profile esm-only",
+    "prepack": "node scripts/check-version.ts && cp ../../README.md ../../LICENSE ../../NOTICE ."
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "@vitest/browser-playwright": "5.0.4",
+    "lighthouse": "13.5.0",
+    "playwright": "1.64.0",
+    "publint": "0.3.25",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tsdown": "0.23.1",
+    "typescript": "7.0.2",
+    "vitest": "5.0.4",
+    "vitest-browser-react": "2.3.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

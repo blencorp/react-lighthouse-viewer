@@ -1,0 +1,72 @@
+name: Release
+
+# Publishes the package version on main if npm does not have it yet. The version always equals
+# the bundled Lighthouse version, so a merged "Lighthouse X.Y.Z" pull request publishes X.Y.Z.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      unpublished: ${{ steps.version.outputs.unpublished }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: version
+        run: |
+          version=$(node -p "require('./packages/react-lighthouse-viewer/package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if npm view "@blen/react-lighthouse-viewer@$version" version > /dev/null 2>&1; then
+            echo "unpublished=false" >> "$GITHUB_OUTPUT"
+            echo "@blen/react-lighthouse-viewer@$version is already on npm."
+          else
+            echo "unpublished=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  check:
+    needs: version
+    if: needs.version.outputs.unpublished == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: [version, check]
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@blen/react-lighthouse-viewer/v/${{ needs.version.outputs.version }}
+    permissions:
+      contents: write # create the tag and the GitHub release
+      id-token: write # npm trusted publishing and provenance
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - name: Publish to npm
+        working-directory: packages/react-lighthouse-viewer
+        run: pnpm publish --no-git-checks
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Bundles the [Lighthouse $VERSION](https://github.com/GoogleChrome/lighthouse/releases/tag/v$VERSION) report renderer."
+            echo
+            awk -v heading="## $VERSION" '$0 == heading { found = 1; next } /^## / { found = 0 } found' CHANGELOG.md
+          } > release-notes.md
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --notes-file release-notes.md

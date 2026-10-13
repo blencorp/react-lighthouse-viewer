@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - example
+
+# Wait a day before installing a newly published version, to avoid compromised releases.
+# Lighthouse is exempt so the sync workflow can publish the matching version the same day.
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - lighthouse
