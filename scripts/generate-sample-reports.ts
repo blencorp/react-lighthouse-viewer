@@ -20,6 +20,7 @@ type Report = {
   fetchTime: string;
   finalDisplayedUrl: string;
   categories: Record<string, { title: string; score: number | null }>;
+  audits: Record<string, { details?: { data?: string } }>;
   runtimeError?: { message: string };
 };
 
@@ -44,6 +45,7 @@ for (const site of sites) {
   }
   index.push({
     slug: site.slug,
+    thumbnail: writeThumbnail(site.slug, report),
     url: report.finalDisplayedUrl,
     lighthouseVersion: report.lighthouseVersion,
     fetchTime: report.fetchTime,
@@ -60,6 +62,16 @@ if (index.length === 0) {
   process.exit(1);
 }
 writeFileSync(new URL('index.json', outDir), `${JSON.stringify(index, null, 2)}\n`);
+
+// Saves the page screenshot from the run as a JPEG for the sample card.
+function writeThumbnail(slug: string, report: Report) {
+  const data = report.audits['final-screenshot']?.details?.data;
+  const match = data?.match(/^data:image\/jpeg;base64,(.+)$/);
+  if (!match?.[1]) return null;
+  const name = `${slug}.jpg`;
+  writeFileSync(new URL(name, outDir), Buffer.from(match[1], 'base64'));
+  return name;
+}
 
 function runLighthouse(url: string, file: URL) {
   execFileSync(

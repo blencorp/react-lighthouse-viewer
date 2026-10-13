@@ -1,13 +1,46 @@
-import { Suspense, use, useState, useTransition } from 'react';
+import { Suspense, useState, useTransition } from 'react';
 import {
+  type LighthouseReport,
   LighthouseViewer,
   lighthouseVersion,
-  type LighthouseReport,
   type RendererOptions,
 } from '@blen/react-lighthouse-viewer';
+import { CodeBlock } from './code-block.tsx';
+import { CopyButton } from './copy-button.tsx';
 import { ErrorBoundary } from './error-boundary.tsx';
-import { loadFile, loadIndex, loadSample, type SampleSummary } from './reports.ts';
-import { UsagePanel } from './usage-panel.tsx';
+import { loadFile, loadIndex, loadSample } from './reports.ts';
+import { SampleGrid } from './sample-grid.tsx';
+import { Switch } from './switch.tsx';
+
+const install = 'npm i @blen/react-lighthouse-viewer';
+
+const usage = `import { Suspense } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
+import {
+  isLighthouseReport,
+  LighthouseViewer,
+} from '@blen/react-lighthouse-viewer';
+
+async function loadReport(url: string) {
+  const json: unknown = await fetch(url).then((res) => res.json());
+  if (!isLighthouseReport(json)) {
+    throw new Error('Not a Lighthouse report');
+  }
+  return json;
+}
+
+// Create the promise outside render.
+const report = loadReport('/report.json');
+
+export function App() {
+  return (
+    <ErrorBoundary fallback={<p>Could not load the report.</p>}>
+      <Suspense fallback={<p>Loading…</p>}>
+        <LighthouseViewer report={report} />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}`;
 
 const indexPromise = loadIndex();
 const initialSlug = decodeURIComponent(location.hash.slice(1));
@@ -15,46 +48,40 @@ const initialSlug = decodeURIComponent(location.hash.slice(1));
 export function App() {
   // An empty slug means "the first sample", which is known only after the index loads.
   const [selected, setSelected] = useState(initialSlug);
+  const [title, setTitle] = useState('');
   // The report is a promise in state. The viewer suspends while it loads.
   const [report, setReport] = useState(() =>
     initialSlug ? loadSample(initialSlug) : loadFirstSample(),
   );
-  const [followSystemTheme, setFollowSystemTheme] = useState(true);
-  const [showTopbar, setShowTopbar] = useState(true);
+  const [darkMode, setDarkMode] = useState(true);
+  const [topbar, setTopbar] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   // A transition keeps the current report on screen while the next one loads.
-  const show = (slug: string, next: Promise<LighthouseReport>) =>
+  const show = (slug: string, name: string, next: Promise<LighthouseReport>) =>
     startTransition(() => {
       setSelected(slug);
+      setTitle(name);
       setReport(next);
-      history.replaceState(
-        null,
-        '',
-        slug && !slug.startsWith('file:') ? `#${slug}` : location.pathname,
-      );
+      history.replaceState(null, '', slug.startsWith('file:') ? location.pathname : `#${slug}`);
     });
 
   const openFile = (file: File | undefined) => {
-    if (file) show(`file:${file.name}`, loadFile(file));
+    if (file) show(`file:${file.name}`, file.name, loadFile(file));
   };
 
-  const options: RendererOptions = {
-    disableDarkMode: !followSystemTheme,
-    omitTopbar: !showTopbar,
-  };
+  const options: RendererOptions = { disableDarkMode: !darkMode, omitTopbar: !topbar };
 
   return (
     <div
-      className="app"
-      data-dragging={dragging || undefined}
+      className="page"
       onDragOver={(event) => {
         event.preventDefault();
         setDragging(true);
       }}
       onDragLeave={(event) => {
-        if (event.currentTarget === event.target) setDragging(false);
+        if (!event.relatedTarget) setDragging(false);
       }}
       onDrop={(event) => {
         event.preventDefault();
@@ -62,66 +89,92 @@ export function App() {
         openFile(event.dataTransfer.files[0]);
       }}
     >
-      <header className="header">
-        <div className="title">
-          <h1>@blen/react-lighthouse-viewer</h1>
-          <span className="muted">Lighthouse {lighthouseVersion}</span>
-        </div>
-        <nav className="links">
-          <a href="https://github.com/blencorp/react-lighthouse-viewer">GitHub</a>
+      <header className="nav container">
+        <span className="brand">
+          <LighthouseMark />
+          react-lighthouse-viewer
+        </span>
+        <nav className="nav-links">
+          <a href="https://github.com/blencorp/react-lighthouse-viewer#readme">Docs</a>
           <a href="https://www.npmjs.com/package/@blen/react-lighthouse-viewer">npm</a>
+          <a className="button" href="https://github.com/blencorp/react-lighthouse-viewer">
+            GitHub
+          </a>
         </nav>
       </header>
 
-      <section className="samples" aria-labelledby="samples-title">
-        <div className="samples-heading">
-          <h2 id="samples-title">Sample reports</h2>
-          {isPending && <span className="muted">Loading…</span>}
+      <section className="hero container">
+        <div className="hero-text">
+          <p className="eyebrow">Lighthouse {lighthouseVersion} renderer · React 19</p>
+          <h1>Lighthouse reports, inside your React app.</h1>
+          <p className="lede">
+            Render any Lighthouse JSON report with the official Lighthouse renderer. Typed, server
+            rendering friendly, and no runtime dependencies.
+          </p>
+          <div className="install">
+            <code>{install}</code>
+            <CopyButton text={install} label="Copy the install command" />
+          </div>
         </div>
-        <Suspense fallback={<p className="muted">Loading samples…</p>}>
-          <SampleGrid selected={selected} onSelect={(slug) => show(slug, loadSample(slug))} />
+        <CodeBlock code={usage} filename="app.tsx" />
+      </section>
+
+      <section className="container section" aria-labelledby="samples-title">
+        <div className="section-heading">
+          <h2 id="samples-title">Sample reports</h2>
+          <p>Fresh Lighthouse runs. Pick a site to open its full report.</p>
+        </div>
+        <Suspense fallback={<div className="grid-skeleton" />}>
+          <SampleGrid
+            samples={indexPromise}
+            selected={selected}
+            onSelect={(slug, host) => show(slug, host, loadSample(slug))}
+          />
         </Suspense>
       </section>
 
-      <div className="controls">
-        <label className="button">
-          Open your own JSON report…
-          <input
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(event) => openFile(event.target.files?.[0])}
-          />
-        </label>
-        <span className="muted">or drop it anywhere on the page. It stays in your browser.</span>
-        <label>
-          <input
-            type="checkbox"
-            checked={followSystemTheme}
-            onChange={(event) => setFollowSystemTheme(event.target.checked)}
-          />
-          Follow system dark mode
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={showTopbar}
-            onChange={(event) => setShowTopbar(event.target.checked)}
-          />
-          Show top bar
-        </label>
-      </div>
+      <section className="container section viewer" aria-label="Report">
+        <div className="toolbar">
+          <div className="toolbar-title">
+            {isPending ? <span className="spinner" aria-label="Loading" /> : null}
+            <span>{title || 'Report'}</span>
+          </div>
+          <div className="toolbar-actions">
+            <Switch checked={darkMode} onChange={setDarkMode} label="Auto dark mode" />
+            <Switch checked={topbar} onChange={setTopbar} label="Top bar" />
+            <label className="button button-primary">
+              Open JSON report
+              <input
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(event) => openFile(event.target.files?.[0])}
+              />
+            </label>
+          </div>
+        </div>
+        <div className="report-frame">
+          <Suspense fallback={<p className="message">Loading report…</p>}>
+            {/* A new report gets a new boundary, so an earlier error does not stick. */}
+            <ErrorBoundary key={selected} FallbackComponent={ReportError}>
+              <LighthouseViewer report={report} options={options} />
+            </ErrorBoundary>
+          </Suspense>
+        </div>
+      </section>
 
-      <UsagePanel />
+      <footer className="footer container">
+        <span>
+          Made by <a href="https://blencorp.com">BLEN</a>. Apache-2.0.
+        </span>
+        <span>Lighthouse is a Google project. Reports stay in your browser.</span>
+      </footer>
 
-      <main>
-        <Suspense fallback={<p className="message">Loading report…</p>}>
-          {/* A new report gets a new boundary, so an earlier error does not stick. */}
-          <ErrorBoundary key={selected} FallbackComponent={ReportError}>
-            <LighthouseViewer report={report} options={options} />
-          </ErrorBoundary>
-        </Suspense>
-      </main>
+      {dragging && (
+        <div className="drop-overlay" aria-hidden="true">
+          <div className="drop-box">Drop a Lighthouse JSON report</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -132,89 +185,20 @@ async function loadFirstSample(): Promise<LighthouseReport> {
   return loadSample(first.slug);
 }
 
-function SampleGrid({
-  selected,
-  onSelect,
-}: {
-  selected: string;
-  onSelect: (slug: string) => void;
-}) {
-  const samples = use(indexPromise);
-  const active = selected || samples[0]?.slug;
-
-  return (
-    <ul className="grid">
-      {samples.map((sample) => (
-        <li key={sample.slug}>
-          <SampleCard
-            sample={sample}
-            active={active === sample.slug}
-            onSelect={() => onSelect(sample.slug)}
-          />
-        </li>
-      ))}
-      {samples.length === 0 && (
-        <li className="muted">
-          Run <code>pnpm reports</code> to generate the website samples.
-        </li>
-      )}
-    </ul>
-  );
-}
-
-function SampleCard({
-  sample,
-  active,
-  onSelect,
-}: {
-  sample: SampleSummary;
-  active: boolean;
-  onSelect: () => void;
-}) {
-  const host = new URL(sample.url).hostname.replace(/^www\./, '');
-  const scores = sample.scores.filter((s) => coreCategories.has(s.id) && s.score !== null);
-  const date = new Date(sample.fetchTime).toLocaleDateString(undefined, { dateStyle: 'medium' });
-
-  return (
-    <button type="button" className="card" aria-pressed={active} onClick={onSelect}>
-      <span className="card-title">{host}</span>
-      <span className="scores">
-        {scores.map((s) => {
-          const score = Math.round((s.score ?? 0) * 100);
-          return (
-            <span key={s.id} className="score" data-rating={rating(score)} title={s.title}>
-              <span className="score-value">{score}</span>
-              <span className="score-label">{shortTitles[s.id]}</span>
-            </span>
-          );
-        })}
-      </span>
-      <span className="card-meta">
-        Lighthouse {sample.lighthouseVersion} · {date}
-      </span>
-    </button>
-  );
-}
-
-const coreCategories = new Set(['performance', 'accessibility', 'best-practices', 'seo']);
-const shortTitles: Record<string, string> = {
-  performance: 'Perf',
-  accessibility: 'A11y',
-  'best-practices': 'BP',
-  seo: 'SEO',
-};
-
-// The same score ranges as the Lighthouse report.
-function rating(score: number) {
-  if (score >= 90) return 'pass';
-  if (score >= 50) return 'average';
-  return 'fail';
-}
-
 function ReportError({ error }: { error: Error }) {
   return (
     <p className="message error" role="alert">
       {error.message}
     </p>
+  );
+}
+
+function LighthouseMark() {
+  return (
+    <svg className="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2 9 6h6l-3-4Z" fill="currentColor" />
+      <path d="M9 7h6l1.6 15H7.4L9 7Z" fill="currentColor" opacity=".9" />
+      <path d="M8.6 11h6.8l.3 3H8.3l.3-3Z" fill="var(--page-bg)" />
+    </svg>
   );
 }
