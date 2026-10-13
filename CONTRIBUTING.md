@@ -1,6 +1,7 @@
 # Contributing
 
-Thanks for helping. Bug reports, fixes and docs improvements are welcome.
+Thanks for helping. Bug reports, fixes and docs improvements are welcome. This project follows
+the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Set up
 
