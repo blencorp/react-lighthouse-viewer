@@ -1,46 +1,18 @@
 import { Suspense, useState, useTransition } from 'react';
 import {
+  fetchLighthouseReport,
   type LighthouseReport,
   LighthouseViewer,
   lighthouseVersion,
   type RendererOptions,
 } from '@blen/react-lighthouse-viewer';
-import { CodeBlock } from './code-block.tsx';
-import { CopyButton } from './copy-button.tsx';
+import { CodeTabs } from './code-block.tsx';
 import { ErrorBoundary } from './error-boundary.tsx';
+import { Install } from './install.tsx';
 import { loadFile, loadIndex, loadSample } from './reports.ts';
 import { SampleGrid } from './sample-grid.tsx';
+import { snippets } from './snippets.ts';
 import { Switch } from './switch.tsx';
-
-const install = 'npm i @blen/react-lighthouse-viewer';
-
-const usage = `import { Suspense } from 'react';
-import { ErrorBoundary } from 'react-error-boundary';
-import {
-  isLighthouseReport,
-  LighthouseViewer,
-} from '@blen/react-lighthouse-viewer';
-
-async function loadReport(url: string) {
-  const json: unknown = await fetch(url).then((res) => res.json());
-  if (!isLighthouseReport(json)) {
-    throw new Error('Not a Lighthouse report');
-  }
-  return json;
-}
-
-// Create the promise outside render.
-const report = loadReport('/report.json');
-
-export function App() {
-  return (
-    <ErrorBoundary fallback={<p>Could not load the report.</p>}>
-      <Suspense fallback={<p>Loading…</p>}>
-        <LighthouseViewer report={report} />
-      </Suspense>
-    </ErrorBoundary>
-  );
-}`;
 
 const indexPromise = loadIndex();
 const initialSlug = decodeURIComponent(location.hash.slice(1));
@@ -64,8 +36,15 @@ export function App() {
       setSelected(slug);
       setTitle(name);
       setReport(next);
-      history.replaceState(null, '', slug.startsWith('file:') ? location.pathname : `#${slug}`);
+      history.replaceState(null, '', slug.includes(':') ? location.pathname : `#${slug}`);
     });
+
+  // A form action runs in a transition, so the current report stays until the new one loads.
+  const openUrl = (formData: FormData) => {
+    const value = formData.get('url');
+    const url = typeof value === 'string' ? value.trim() : '';
+    if (url) show(`url:${url}`, url, fetchLighthouseReport(url));
+  };
 
   const openFile = (file: File | undefined) => {
     if (file) show(`file:${file.name}`, file.name, loadFile(file));
@@ -111,12 +90,9 @@ export function App() {
             Render any Lighthouse JSON report with the official Lighthouse renderer. Typed, server
             rendering friendly, and no runtime dependencies.
           </p>
-          <div className="install">
-            <code>{install}</code>
-            <CopyButton text={install} label="Copy the install command" />
-          </div>
+          <Install />
         </div>
-        <CodeBlock code={usage} filename="app.tsx" />
+        <CodeTabs snippets={snippets} />
       </section>
 
       <section className="container section" aria-labelledby="samples-title">
@@ -135,15 +111,33 @@ export function App() {
 
       <section className="container section viewer" aria-label="Report">
         <div className="toolbar">
-          <div className="toolbar-title">
-            {isPending ? <span className="spinner" aria-label="Loading" /> : null}
-            <span>{title || 'Report'}</span>
+          <div className="toolbar-row">
+            <div className="toolbar-title">
+              {isPending ? <span className="spinner" aria-label="Loading" /> : null}
+              <span className="toolbar-name" title={title}>
+                {title || 'Report'}
+              </span>
+            </div>
+            <div className="toolbar-actions">
+              <Switch checked={darkMode} onChange={setDarkMode} label="Auto dark mode" />
+              <Switch checked={topbar} onChange={setTopbar} label="Top bar" />
+            </div>
           </div>
-          <div className="toolbar-actions">
-            <Switch checked={darkMode} onChange={setDarkMode} label="Auto dark mode" />
-            <Switch checked={topbar} onChange={setTopbar} label="Top bar" />
-            <label className="button button-primary">
-              Open JSON report
+          <div className="toolbar-row">
+            <form className="url-form" action={openUrl}>
+              <input
+                type="url"
+                name="url"
+                required
+                placeholder="Paste a report URL, for example https://example.com/report.json"
+                aria-label="Report URL"
+              />
+              <button type="submit" className="button button-primary">
+                Load
+              </button>
+            </form>
+            <label className="button">
+              Open a file
               <input
                 type="file"
                 accept="application/json,.json"

@@ -178,6 +178,39 @@ h1 {
   font-size: 18px;
 }
 
+.install-block {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.segmented button {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.segmented button[aria-selected='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
 .install {
   display: inline-flex;
   align-items: center;
@@ -229,26 +262,41 @@ h1 {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px 10px 16px;
+  padding: 8px 10px;
   border-bottom: 1px solid #27272a;
   color: #a1a1aa;
   font-size: 13px;
 }
 
-.code-dots {
+.code-tabs {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
-.code-dots span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #3f3f46;
+.code-tab {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: #a1a1aa;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.code-tab:hover {
+  color: #e4e4e7;
+}
+
+.code-tab[aria-selected='true'] {
+  background: #27272a;
+  color: #fafafa;
 }
 
 .code-filename {
   flex: 1;
+  color: #71717a;
+  text-align: right;
 }
 
 .code .copy-button {
@@ -471,22 +519,58 @@ h2 {
 
 .toolbar {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px 24px;
-  padding: 12px 12px 12px 20px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 14px 14px 20px;
   border: 1px solid var(--border);
   border-bottom: 0;
   border-radius: var(--radius) var(--radius) 0 0;
   background: var(--surface);
 }
 
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px 24px;
+}
+
+.url-form {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  min-width: min(100%, 320px);
+}
+
+.url-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--page-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.url-form input::placeholder {
+  color: var(--muted);
+}
+
 .toolbar-title {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   font-weight: 600;
+}
+
+.toolbar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolbar-actions {

@@ -9,53 +9,44 @@ official Lighthouse report renderer.
 
 **[Live demo →](https://blencorp.github.io/react-lighthouse-viewer/)**
 
-![A Lighthouse report rendered by react-lighthouse-viewer](https://raw.githubusercontent.com/blencorp/react-lighthouse-viewer/main/.github/assets/screenshot.png)
+![The blencorp.com Lighthouse report in the example site](https://raw.githubusercontent.com/blencorp/react-lighthouse-viewer/main/.github/assets/screenshot.png)
 
 - The report looks and works like the HTML report Lighthouse writes, because it uses the same renderer.
+- Load a report from a URL with `fetchLighthouseReport`, or pass a report object you already have.
+- Built for React 19: pass a promise and the viewer suspends, with errors going to your error boundary.
 - Renders reports from Lighthouse 6 and later.
-- The version matches Lighthouse: `@blen/react-lighthouse-viewer@13.5.0` bundles the Lighthouse 13.5.0 renderer.
-- No runtime dependencies. React 19 is the only peer dependency.
-- TypeScript types for the report and the renderer options.
+- The version matches Lighthouse: each release bundles the Lighthouse renderer with the same version number.
+- No runtime dependencies. React 19 is the only peer dependency. Works with npm, pnpm, yarn and bun.
+- TypeScript types for the report, the options and the props, plus a runtime check for untrusted JSON.
 - Works with server rendering and React Server Components (it is a client component).
 
 ## Install
 
 ```sh
 npm install @blen/react-lighthouse-viewer
+pnpm add @blen/react-lighthouse-viewer
+yarn add @blen/react-lighthouse-viewer
+bun add @blen/react-lighthouse-viewer
 ```
 
 ## Usage
 
-```tsx
-import { LighthouseViewer } from '@blen/react-lighthouse-viewer';
+`report` takes a Lighthouse report, or a promise of one. A report is the JSON that Lighthouse
+writes, for example with `lighthouse https://example.com --output=json --output-path=report.json`.
 
-export function Report({ report }) {
-  return <LighthouseViewer report={report} />;
-}
-```
+### Load a report from a URL
 
-`report` is the JSON that Lighthouse writes, for example with
-`lighthouse https://example.com --output=json --output-path=report.json`. It can be the report
-object or a promise of it.
-
-### Load a report
-
-Pass a promise. The viewer reads it with React's `use`, so it suspends while the report loads.
-Check fetched JSON with `isLighthouseReport` instead of casting it:
+`fetchLighthouseReport(url)` fetches the JSON, checks that it is a Lighthouse report, and returns a
+promise. Pass the promise to the viewer. The viewer reads it with React's `use`, so it suspends
+while the report loads:
 
 ```tsx
 import { Suspense } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { isLighthouseReport, LighthouseViewer } from '@blen/react-lighthouse-viewer';
+import { fetchLighthouseReport, LighthouseViewer } from '@blen/react-lighthouse-viewer';
 
-async function loadReport(url: string) {
-  const json: unknown = await fetch(url).then((response) => response.json());
-  if (!isLighthouseReport(json)) throw new Error(`${url} is not a Lighthouse report.`);
-  return json;
-}
-
-// Create the promise outside render.
-const report = loadReport('/report.json');
+// Start loading outside render.
+const report = fetchLighthouseReport('/reports/site.json');
 
 export function App() {
   return (
@@ -68,12 +59,54 @@ export function App() {
 }
 ```
 
+The URL can be on another site if that site allows cross-origin requests (CORS). The second
+argument goes to `fetch`, for example `fetchLighthouseReport(url, { headers })`. The promise
+rejects with a readable error when the request fails, the response is not JSON, or the JSON is not
+a report.
+
 Create the promise **outside render**: at module level, in an event handler, in a router loader,
 or in a Server Component. A promise created during render is a new promise on every render, so the
 component never stops suspending. To switch reports, keep the promise in state and set a new one
 inside `startTransition`. The current report then stays on screen while the next one loads. The
 [example site](https://github.com/blencorp/react-lighthouse-viewer/tree/main/example/src) uses this
 pattern.
+
+### Pass a report object
+
+If you already have the report, for example from a file upload, a JSON import or your own API,
+pass it directly. Check JSON that you do not control with `isLighthouseReport`:
+
+```tsx
+import { useState } from 'react';
+import {
+  isLighthouseReport,
+  LighthouseViewer,
+  type LighthouseReport,
+} from '@blen/react-lighthouse-viewer';
+
+export function Upload() {
+  const [report, setReport] = useState<LighthouseReport>();
+
+  async function open(file: File) {
+    const json: unknown = JSON.parse(await file.text());
+    if (isLighthouseReport(json)) setReport(json);
+  }
+
+  return (
+    <>
+      <input
+        type="file"
+        accept=".json"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void open(file);
+        }}
+      />
+      {report && <LighthouseViewer report={report} />}
+    </>
+  );
+}
+```
 
 ### Errors
 
@@ -188,8 +221,9 @@ It checks the top-level shape the renderer needs (`lighthouseVersion`, `categori
 
 The package version is the version of the Lighthouse renderer that it bundles. For example,
 `13.5.0` bundles Lighthouse `13.5.0`. A workflow checks for new Lighthouse releases every day and
-publishes the matching version. Changes to the component itself ship with the next Lighthouse
-release, and the [changelog](https://github.com/blencorp/react-lighthouse-viewer/blob/main/CHANGELOG.md) lists them.
+opens a pull request for the matching version. When a maintainer merges it, GitHub Actions
+publishes the release to npm with provenance. Changes to the component itself ship with the next
+Lighthouse release, and the [changelog](https://github.com/blencorp/react-lighthouse-viewer/blob/main/CHANGELOG.md) lists them.
 
 ## Migrate from 6.x
 

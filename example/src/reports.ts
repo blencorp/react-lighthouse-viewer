@@ -1,4 +1,8 @@
-import { isLighthouseReport, type LighthouseReport } from '@blen/react-lighthouse-viewer';
+import {
+  fetchLighthouseReport,
+  isLighthouseReport,
+  type LighthouseReport,
+} from '@blen/react-lighthouse-viewer';
 
 export type SampleSummary = {
   slug: string;
@@ -19,10 +23,8 @@ export async function loadIndex(): Promise<SampleSummary[]> {
 }
 
 // These loaders reject with a readable message. The error boundary around the viewer shows it.
-export async function loadSample(slug: string): Promise<LighthouseReport> {
-  const response = await fetch(`${reportsUrl}${encodeURIComponent(slug)}.json`);
-  if (!response.ok) throw new Error(`There is no sample report named ${slug}.`);
-  return checkReport(slug, await response.json());
+export function loadSample(slug: string): Promise<LighthouseReport> {
+  return fetchLighthouseReport(`${reportsUrl}${encodeURIComponent(slug)}.json`);
 }
 
 export async function loadFile(file: File): Promise<LighthouseReport> {

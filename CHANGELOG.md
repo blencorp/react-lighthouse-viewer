@@ -8,6 +8,8 @@ lists the changes to the component itself. For renderer changes, see the
 
 - `report` also takes a promise of a report. The component reads it with `use()`, so it works with
   `<Suspense>` and with promises that Server Components pass down.
+- Add `fetchLighthouseReport(url)`, which fetches a report, checks it, and returns a promise for
+  the viewer.
 - Add `isLighthouseReport`, a type guard for JSON that users upload or that you fetch.
 - Throw a clear `TypeError` when `report` is not a Lighthouse report, for error boundaries to show.
 
