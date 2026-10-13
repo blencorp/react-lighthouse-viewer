@@ -15,12 +15,13 @@ pnpm --filter @blen/react-lighthouse-viewer exec playwright install chromium
 
 ## Repo layout
 
-| Path                               | What it is                                        |
-| ---------------------------------- | ------------------------------------------------- |
-| `packages/react-lighthouse-viewer` | The published package.                            |
-| `example`                          | The demo site, deployed to GitHub Pages.          |
-| `scripts/sync-lighthouse.ts`       | Updates the bundled Lighthouse version.           |
-| `.github/workflows`                | CI, release, Lighthouse sync and Pages workflows. |
+| Path                                 | What it is                                             |
+| ------------------------------------ | ------------------------------------------------------ |
+| `packages/react-lighthouse-viewer`   | The published package.                                 |
+| `example`                            | The demo site, deployed to GitHub Pages.               |
+| `scripts/sync-lighthouse.ts`         | Updates the bundled Lighthouse version.                |
+| `scripts/generate-sample-reports.ts` | Makes the demo sample reports. They are not committed. |
+| `.github/workflows`                  | CI, release, Lighthouse sync and Pages workflows.      |
 
 ## Scripts
 
@@ -28,7 +29,8 @@ Run these from the repo root:
 
 | Command          | What it does                                                           |
 | ---------------- | ---------------------------------------------------------------------- |
-| `pnpm dev`       | Starts the demo site. Run `pnpm build` first.                          |
+| `pnpm dev`       | Starts the demo site. Run `pnpm build` and `pnpm reports` first.       |
+| `pnpm reports`   | Runs Lighthouse on the demo websites to make the sample reports.       |
 | `pnpm build`     | Builds the package with tsdown.                                        |
 | `pnpm test`      | Runs the tests in Chromium (Vitest browser mode) and the server tests. |
 | `pnpm lint`      | Runs Oxlint and checks formatting with oxfmt.                          |
