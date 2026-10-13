@@ -10,7 +10,6 @@ A full rewrite on top of the official Lighthouse report renderer.
 
 - Publish as `@blen/react-lighthouse-viewer`. The unscoped `react-lighthouse-viewer` package is
   deprecated.
-
 - Bundle the Lighthouse 13.5.0 report renderer. Reports from Lighthouse 6 and later render.
 - New API: `<LighthouseViewer report={...} options={...} />`, a named export.
 - Accept all Lighthouse renderer options, such as `disableDarkMode`, `omitTopbar` and
@@ -20,7 +19,7 @@ A full rewrite on top of the official Lighthouse report renderer.
 - Ship TypeScript types for the report, the options and the props.
 - Require React 19.
 - Change the license to Apache-2.0, the same license as Lighthouse.
-- Publish from GitHub Actions with npm provenance.
+- Publish later versions from GitHub Actions with npm trusted publishing and provenance.
 
 See "Migrate from 6.x" in the README.
 
