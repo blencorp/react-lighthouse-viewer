@@ -4,14 +4,7 @@ import {
   lighthouseVersion,
   type RendererOptions,
 } from '@blen/react-lighthouse-viewer';
-import {
-  legacySlug,
-  type LoadResult,
-  loadFile,
-  loadIndex,
-  loadSample,
-  type SampleSummary,
-} from './reports.ts';
+import { type LoadResult, loadFile, loadIndex, loadSample, type SampleSummary } from './reports.ts';
 
 const indexPromise = loadIndex();
 const initialSlug = decodeURIComponent(location.hash.slice(1));
@@ -122,7 +115,9 @@ export function App() {
 
 async function loadFirstSample(): Promise<LoadResult> {
   const [first] = await indexPromise;
-  return loadSample(first?.slug ?? legacySlug);
+  return first
+    ? loadSample(first.slug)
+    : { error: 'There are no sample reports yet. Open your own report to view it.' };
 }
 
 function SampleGrid({
@@ -133,7 +128,7 @@ function SampleGrid({
   onSelect: (slug: string) => void;
 }) {
   const samples = use(indexPromise);
-  const active = selected || samples[0]?.slug || legacySlug;
+  const active = selected || samples[0]?.slug;
 
   return (
     <ul className="grid">
@@ -146,18 +141,6 @@ function SampleGrid({
           />
         </li>
       ))}
-      <li>
-        <button
-          type="button"
-          className="card"
-          aria-pressed={active === legacySlug}
-          onClick={() => onSelect(legacySlug)}
-        >
-          <span className="card-title">Lighthouse 6 report</span>
-          <span className="muted">blencorp.com in 2020. Old reports still render.</span>
-          <span className="card-meta">Lighthouse 6.1.0</span>
-        </button>
-      </li>
       {samples.length === 0 && (
         <li className="muted">
           Run <code>pnpm reports</code> to generate the website samples.
