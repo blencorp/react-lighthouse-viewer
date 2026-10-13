@@ -231,3 +231,25 @@ h2 {
     scroll-snap-align: start;
   }
 }
+
+.usage {
+  margin: 0 16px 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.usage summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.usage pre {
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--card-bg);
+  font-size: 13px;
+  line-height: 1.5;
+}

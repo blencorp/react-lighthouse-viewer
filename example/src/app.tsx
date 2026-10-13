@@ -2,9 +2,12 @@ import { Suspense, use, useState, useTransition } from 'react';
 import {
   LighthouseViewer,
   lighthouseVersion,
+  type LighthouseReport,
   type RendererOptions,
 } from '@blen/react-lighthouse-viewer';
-import { type LoadResult, loadFile, loadIndex, loadSample, type SampleSummary } from './reports.ts';
+import { ErrorBoundary } from './error-boundary.tsx';
+import { loadFile, loadIndex, loadSample, type SampleSummary } from './reports.ts';
+import { UsagePanel } from './usage-panel.tsx';
 
 const indexPromise = loadIndex();
 const initialSlug = decodeURIComponent(location.hash.slice(1));
@@ -12,7 +15,8 @@ const initialSlug = decodeURIComponent(location.hash.slice(1));
 export function App() {
   // An empty slug means "the first sample", which is known only after the index loads.
   const [selected, setSelected] = useState(initialSlug);
-  const [result, setResult] = useState(() =>
+  // The report is a promise in state. The viewer suspends while it loads.
+  const [report, setReport] = useState(() =>
     initialSlug ? loadSample(initialSlug) : loadFirstSample(),
   );
   const [followSystemTheme, setFollowSystemTheme] = useState(true);
@@ -21,15 +25,19 @@ export function App() {
   const [isPending, startTransition] = useTransition();
 
   // A transition keeps the current report on screen while the next one loads.
-  const show = (slug: string, next: Promise<LoadResult>) =>
+  const show = (slug: string, next: Promise<LighthouseReport>) =>
     startTransition(() => {
       setSelected(slug);
-      setResult(next);
-      history.replaceState(null, '', slug && slug !== 'file' ? `#${slug}` : location.pathname);
+      setReport(next);
+      history.replaceState(
+        null,
+        '',
+        slug && !slug.startsWith('file:') ? `#${slug}` : location.pathname,
+      );
     });
 
   const openFile = (file: File | undefined) => {
-    if (file) show('file', loadFile(file));
+    if (file) show(`file:${file.name}`, loadFile(file));
   };
 
   const options: RendererOptions = {
@@ -104,20 +112,24 @@ export function App() {
         </label>
       </div>
 
+      <UsagePanel />
+
       <main>
         <Suspense fallback={<p className="message">Loading report…</p>}>
-          <Report result={result} options={options} />
+          {/* A new report gets a new boundary, so an earlier error does not stick. */}
+          <ErrorBoundary key={selected} FallbackComponent={ReportError}>
+            <LighthouseViewer report={report} options={options} />
+          </ErrorBoundary>
         </Suspense>
       </main>
     </div>
   );
 }
 
-async function loadFirstSample(): Promise<LoadResult> {
+async function loadFirstSample(): Promise<LighthouseReport> {
   const [first] = await indexPromise;
-  return first
-    ? loadSample(first.slug)
-    : { error: 'There are no sample reports yet. Open your own report to view it.' };
+  if (!first) throw new Error('There are no sample reports yet. Open your own report to view it.');
+  return loadSample(first.slug);
 }
 
 function SampleGrid({
@@ -199,14 +211,10 @@ function rating(score: number) {
   return 'fail';
 }
 
-function Report({ result, options }: { result: Promise<LoadResult>; options: RendererOptions }) {
-  const loaded = use(result);
-  if ('error' in loaded) {
-    return (
-      <p className="message error" role="alert">
-        {loaded.error}
-      </p>
-    );
-  }
-  return <LighthouseViewer report={loaded.report} options={options} aria-label={loaded.name} />;
+function ReportError({ error }: { error: Error }) {
+  return (
+    <p className="message error" role="alert">
+      {error.message}
+    </p>
+  );
 }

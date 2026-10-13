@@ -1,6 +1,4 @@
-import type { LighthouseReport } from '@blen/react-lighthouse-viewer';
-
-export type LoadResult = { name: string; report: LighthouseReport } | { error: string };
+import { isLighthouseReport, type LighthouseReport } from '@blen/react-lighthouse-viewer';
 
 export type SampleSummary = {
   slug: string;
@@ -19,32 +17,24 @@ export async function loadIndex(): Promise<SampleSummary[]> {
   return response.ok ? response.json() : [];
 }
 
-export async function loadSample(slug: string): Promise<LoadResult> {
+// These loaders reject with a readable message. The error boundary around the viewer shows it.
+export async function loadSample(slug: string): Promise<LighthouseReport> {
   const response = await fetch(`${reportsUrl}${encodeURIComponent(slug)}.json`);
-  if (!response.ok) return { error: `There is no sample report named ${slug}.` };
-  return toResult(slug, await response.json());
+  if (!response.ok) throw new Error(`There is no sample report named ${slug}.`);
+  return checkReport(slug, await response.json());
 }
 
-export async function loadFile(file: File): Promise<LoadResult> {
+export async function loadFile(file: File): Promise<LighthouseReport> {
+  let json: unknown;
   try {
-    return toResult(file.name, JSON.parse(await file.text()));
+    json = JSON.parse(await file.text());
   } catch {
-    return { error: `${file.name} is not valid JSON.` };
+    throw new Error(`${file.name} is not valid JSON.`);
   }
+  return checkReport(file.name, json);
 }
 
-function toResult(name: string, report: unknown): LoadResult {
-  return isReport(report)
-    ? { name, report }
-    : { error: `${name} is not a Lighthouse JSON report.` };
-}
-
-function isReport(value: unknown): value is LighthouseReport {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'lighthouseVersion' in value &&
-    'categories' in value &&
-    'audits' in value
-  );
+function checkReport(name: string, json: unknown): LighthouseReport {
+  if (!isLighthouseReport(json)) throw new Error(`${name} is not a Lighthouse JSON report.`);
+  return json;
 }

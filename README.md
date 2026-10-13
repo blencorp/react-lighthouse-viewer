@@ -35,30 +35,52 @@ export function Report({ report }) {
 ```
 
 `report` is the JSON that Lighthouse writes, for example with
-`lighthouse https://example.com --output=json --output-path=report.json`.
+`lighthouse https://example.com --output=json --output-path=report.json`. It can be the report
+object or a promise of it.
 
 ### Load a report
 
-Fetch the report and read it with React's `use`:
+Pass a promise. The viewer reads it with React's `use`, so it suspends while the report loads.
+Check fetched JSON with `isLighthouseReport` instead of casting it:
 
 ```tsx
-import { Suspense, use } from 'react';
-import { LighthouseViewer, type LighthouseReport } from '@blen/react-lighthouse-viewer';
+import { Suspense } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
+import { isLighthouseReport, LighthouseViewer } from '@blen/react-lighthouse-viewer';
 
-const reportPromise: Promise<LighthouseReport> = fetch('/report.json').then((res) => res.json());
-
-function Report() {
-  return <LighthouseViewer report={use(reportPromise)} />;
+async function loadReport(url: string) {
+  const json: unknown = await fetch(url).then((response) => response.json());
+  if (!isLighthouseReport(json)) throw new Error(`${url} is not a Lighthouse report.`);
+  return json;
 }
+
+// Create the promise outside render.
+const report = loadReport('/report.json');
 
 export function App() {
   return (
-    <Suspense fallback={<p>Loading report…</p>}>
-      <Report />
-    </Suspense>
+    <ErrorBoundary fallback={<p>Could not load the report.</p>}>
+      <Suspense fallback={<p>Loading report…</p>}>
+        <LighthouseViewer report={report} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 ```
+
+Create the promise **outside render**: at module level, in an event handler, in a router loader,
+or in a Server Component. A promise created during render is a new promise on every render, so the
+component never stops suspending. To switch reports, keep the promise in state and set a new one
+inside `startTransition`. The current report then stays on screen while the next one loads. The
+[example site](https://github.com/blencorp/react-lighthouse-viewer/tree/main/example/src) uses this
+pattern.
+
+### Errors
+
+If `report` is not a Lighthouse report, or its promise rejects, the component throws. The nearest
+[error boundary](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)
+catches the error. The message for a value that is not a report starts with
+``LighthouseViewer: `report` is not a Lighthouse report.``
 
 ### Options
 
@@ -98,13 +120,21 @@ you. Without it, wrap callbacks in `useCallback`.
 The package marks itself as a client component (`'use client'`), so you can use it in a Server
 Component. The server sends an empty container, and the report renders in the browser.
 
+A Server Component can start loading the report and pass the promise down without `await`. React
+streams the result to the browser:
+
 ```tsx
 // app/report/page.tsx
-import { LighthouseViewer, type LighthouseReport } from '@blen/react-lighthouse-viewer';
-import report from './report.json';
+import { Suspense } from 'react';
+import { LighthouseViewer } from '@blen/react-lighthouse-viewer';
+import { getReport } from './get-report'; // your data access, for example a database or storage read
 
 export default function Page() {
-  return <LighthouseViewer report={report as LighthouseReport} />;
+  return (
+    <Suspense fallback={<p>Loading report…</p>}>
+      <LighthouseViewer report={getReport()} />
+    </Suspense>
+  );
 }
 ```
 
@@ -138,8 +168,12 @@ The report brings its own styles. They apply only inside the report element (`.l
 ### TypeScript
 
 The package exports `LighthouseReport` (the Lighthouse result type), `RendererOptions`, and
-`LighthouseViewerProps`. TypeScript widens string literals in imported JSON, so cast imported
-reports: `report as LighthouseReport`.
+`LighthouseViewerProps`.
+
+`isLighthouseReport(value)` is a type guard. Use it for JSON that users upload or that you fetch.
+It checks the top-level shape the renderer needs (`lighthouseVersion`, `categories`, `audits`,
+`configSettings`), not every audit. For a report file in your own repo, a cast
+(`report as LighthouseReport`) is fine, because TypeScript widens string literals in imported JSON.
 
 `lighthouseVersion` is the Lighthouse version that the package bundles.
 

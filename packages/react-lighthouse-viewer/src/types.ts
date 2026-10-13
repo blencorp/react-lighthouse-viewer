@@ -12,8 +12,12 @@ export type LighthouseReport = Result;
 export type RendererOptions = Renderer.Options;
 
 export type LighthouseViewerProps = {
-  /** The Lighthouse result to render. */
-  report: LighthouseReport;
+  /**
+   * The Lighthouse result to render, or a promise of one. A promise suspends the component, so wrap
+   * it in `<Suspense>`. Create the promise outside render (or pass it from a Server Component), so
+   * it stays the same between renders.
+   */
+  report: LighthouseReport | Promise<LighthouseReport>;
   /** Options passed to the Lighthouse report renderer. */
   options?: RendererOptions;
   /** Ref to the container element that holds the rendered report. */

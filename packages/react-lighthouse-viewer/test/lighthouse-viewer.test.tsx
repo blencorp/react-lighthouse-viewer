@@ -1,8 +1,26 @@
-import { createRef, StrictMode, useCallback, useState } from 'react';
-import { describe, expect, test, vi } from 'vitest';
+import {
+  Component,
+  createRef,
+  type ReactNode,
+  StrictMode,
+  Suspense,
+  useCallback,
+  useState,
+} from 'react';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { LighthouseViewer, lighthouseVersion } from '../src/index.ts';
+import { type LighthouseReport, LighthouseViewer, lighthouseVersion } from '../src/index.ts';
 import { reportLatest, report6 } from './fixtures.ts';
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error?: Error }> {
+  override state: { error?: Error } = {};
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  override render() {
+    return this.state.error ? <p role="alert">{this.state.error.message}</p> : this.props.children;
+  }
+}
 
 const gaugeTitles = (container: HTMLElement) =>
   [...container.querySelectorAll('.lh-scores-header .lh-gauge__label')].map(
@@ -10,6 +28,10 @@ const gaugeTitles = (container: HTMLElement) =>
   );
 
 describe('LighthouseViewer', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   test('renders a report from the bundled Lighthouse version', async () => {
     const { container } = await render(<LighthouseViewer report={reportLatest} />);
 
@@ -124,6 +146,36 @@ describe('LighthouseViewer', () => {
     );
     expect(screen.container.querySelector('article.lh-root')).not.toBe(firstRoot);
     expect(screen.container.querySelector('.lh-topbar')).toBeNull();
+  });
+
+  test('renders a report from a promise inside Suspense', async () => {
+    const { promise: reportPromise, resolve } = Promise.withResolvers<LighthouseReport>();
+    const screen = await render(
+      <Suspense fallback={<p>Loading report</p>}>
+        <LighthouseViewer report={reportPromise} />
+      </Suspense>,
+    );
+    await expect.element(screen.getByText('Loading report')).toBeVisible();
+
+    resolve(reportLatest);
+    await expect.poll(() => screen.container.querySelectorAll('article.lh-root').length).toBe(1);
+  });
+
+  test('throws a clear error for a value that is not a report', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const notAReport = { name: 'flow', steps: [] } as unknown as LighthouseReport;
+    const screen = await render(
+      <ErrorBoundary>
+        <LighthouseViewer report={notAReport} />
+      </ErrorBoundary>,
+    );
+
+    const alert = screen.getByRole('alert');
+    await expect.element(alert).toBeVisible();
+    expect(alert.element().textContent).toMatch(
+      /^LighthouseViewer: `report` is not a Lighthouse report\./,
+    );
+    expect(screen.container.querySelector('article.lh-root')).toBeNull();
   });
 
   test('exports the bundled Lighthouse version', () => {

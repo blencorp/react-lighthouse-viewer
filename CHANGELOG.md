@@ -4,6 +4,13 @@ Each version bundles the Lighthouse report renderer with the same version number
 lists the changes to the component itself. For renderer changes, see the
 [Lighthouse releases](https://github.com/GoogleChrome/lighthouse/releases).
 
+## Unreleased
+
+- `report` also takes a promise of a report. The component reads it with `use()`, so it works with
+  `<Suspense>` and with promises that Server Components pass down.
+- Add `isLighthouseReport`, a type guard for JSON that users upload or that you fetch.
+- Throw a clear `TypeError` when `report` is not a Lighthouse report, for error boundaries to show.
+
 ## 13.5.0
 
 A full rewrite on top of the official Lighthouse report renderer.

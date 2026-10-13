@@ -27,5 +27,11 @@ run('pnpm', [
 
 const changelogUrl = new URL('../CHANGELOG.md', import.meta.url);
 const changelog = readFileSync(changelogUrl, 'utf8');
-const entry = `## ${version}\n\n- Bundle Lighthouse ${version}.\n\n`;
-writeFileSync(changelogUrl, changelog.replace(/^## /m, `${entry}## `));
+// The changes under "Unreleased" ship with this version.
+const bundleLine = `- Bundle Lighthouse ${version}.\n`;
+writeFileSync(
+  changelogUrl,
+  changelog.includes('## Unreleased\n\n')
+    ? changelog.replace('## Unreleased\n\n', `## ${version}\n\n${bundleLine}`)
+    : changelog.replace(/^## /m, `## ${version}\n\n${bundleLine}\n## `),
+);

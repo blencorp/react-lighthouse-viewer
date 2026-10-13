@@ -42,7 +42,7 @@ Run these from the repo root:
 
 - Run `pnpm check` before you open a pull request.
 - Add or update tests for behavior changes.
-- Add a line under the next version in `CHANGELOG.md` if users will notice the change.
+- Add a line under `## Unreleased` in `CHANGELOG.md` if users will notice the change.
 
 ## Versions and releases
 
