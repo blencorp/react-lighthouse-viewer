@@ -1,0 +1,35 @@
+name: Bug report
+description: The component does not work as the docs say.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: A link to a repo or StackBlitz, or a short code sample. Attach the report JSON if it matters (remove private data first).
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: react-lighthouse-viewer version
+      placeholder: 13.5.0
+    validations:
+      required: true
+  - type: input
+    id: report-version
+    attributes:
+      label: Lighthouse version of the report
+      description: The `lighthouseVersion` field in the report JSON.
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: React version, framework (Vite, Next.js, …) and browser.

@@ -1,0 +1,6 @@
+react-lighthouse-viewer
+Copyright 2019-2026 BLEN, Inc.
+
+This product bundles the Lighthouse report renderer and its type definitions
+(https://github.com/GoogleChrome/lighthouse), Copyright Google LLC, licensed
+under the Apache License, Version 2.0.

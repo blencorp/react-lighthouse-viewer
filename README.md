@@ -1,120 +1,191 @@
 # react-lighthouse-viewer
 
-If you have generated lighthouse report using lighthouse CLI, you can use this component to render the JSON report inside React.
+[![npm](https://img.shields.io/npm/v/react-lighthouse-viewer)](https://www.npmjs.com/package/react-lighthouse-viewer)
+[![CI](https://github.com/blencorp/react-lighthouse-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/blencorp/react-lighthouse-viewer/actions/workflows/ci.yml)
+[![License](https://img.shields.io/npm/l/react-lighthouse-viewer)](https://github.com/blencorp/react-lighthouse-viewer/blob/main/LICENSE)
 
-## Installation
+Render [Lighthouse](https://github.com/GoogleChrome/lighthouse) JSON reports in React, with the
+official Lighthouse report renderer.
+
+**[Live demo →](https://blencorp.github.io/react-lighthouse-viewer/)**
+
+![A Lighthouse report rendered by react-lighthouse-viewer](https://raw.githubusercontent.com/blencorp/react-lighthouse-viewer/main/.github/assets/screenshot.png)
+
+- The report looks and works like the HTML report Lighthouse writes, because it uses the same renderer.
+- Renders reports from Lighthouse 6 and later.
+- The version matches Lighthouse: `react-lighthouse-viewer@13.5.0` bundles the Lighthouse 13.5.0 renderer.
+- No runtime dependencies. React 19 is the only peer dependency.
+- TypeScript types for the report and the renderer options.
+- Works with server rendering and React Server Components (it is a client component).
+
+## Install
 
 ```sh
-yarn add react-lighthouse-viewer
+npm install react-lighthouse-viewer
 ```
 
 ## Usage
 
-```Javascript
-import React from 'react';
-import { render } from 'react-dom';
-import ReportViewer from 'react-lighthouse-viewer';
+```tsx
+import { LighthouseViewer } from 'react-lighthouse-viewer';
 
-import jsonReport from './report.json';
+export function Report({ report }) {
+  return <LighthouseViewer report={report} />;
+}
+```
 
-const App = () => (
-    <ReportViewer json={jsonReport} />
+`report` is the JSON that Lighthouse writes, for example with
+`lighthouse https://example.com --output=json --output-path=report.json`.
+
+### Load a report
+
+Fetch the report and read it with React's `use`:
+
+```tsx
+import { Suspense, use } from 'react';
+import { LighthouseViewer, type LighthouseReport } from 'react-lighthouse-viewer';
+
+const reportPromise: Promise<LighthouseReport> = fetch('/report.json').then((res) => res.json());
+
+function Report() {
+  return <LighthouseViewer report={use(reportPromise)} />;
+}
+
+export function App() {
+  return (
+    <Suspense fallback={<p>Loading report…</p>}>
+      <Report />
+    </Suspense>
+  );
+}
+```
+
+### Options
+
+`options` goes to the Lighthouse renderer unchanged:
+
+```tsx
+<LighthouseViewer
+  report={report}
+  options={{ disableDarkMode: true, omitTopbar: true }}
+  className="report"
+/>
+```
+
+| Option                    | Type                                              | Description                                                                    |
+| ------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `disableDarkMode`         | `boolean`                                         | Do not switch to dark mode when the user prefers it.                           |
+| `disableFireworks`        | `boolean`                                         | Do not show the fireworks when all core categories score 100.                  |
+| `omitTopbar`              | `boolean`                                         | Hide the top bar (URL, tools menu, sticky score header).                       |
+| `omitGlobalStyles`        | `boolean`                                         | Do not inject the report styles. Use this when the page already includes them. |
+| `occupyEntireViewport`    | `boolean`                                         | Make the report fill the viewport. Use this when the report is the whole page. |
+| `getStandaloneReportHTML` | `() => string`                                    | Shows **Save as HTML** in the tools menu and supplies the HTML to save.        |
+| `onSaveFileOverride`      | `(blob: Blob, filename: string) => Promise<void>` | Called to save JSON or HTML, instead of a browser download.                    |
+| `onPrintOverride`         | `(rootEl: HTMLElement) => Promise<void>`          | Called to print, instead of `window.print()`.                                  |
+| `onViewTrace`             | `() => void`                                      | Shows a **View Trace** action and calls this when the user clicks it.          |
+| `onPageAnchorRendered`    | `(link: HTMLAnchorElement) => void`               | Called for each in-report anchor link, so you can change its `href`.           |
+
+All other `div` props (`className`, `style`, `id`, `ref`, …) go to the container element.
+
+The report renders again when `report`, an option value, or a callback changes. Option values are
+compared by value, so an inline `options={{ ... }}` object is fine. Callbacks are compared by
+identity: a new function renders the report again, and the user loses scroll position and open
+audits. [React Compiler](https://react.dev/learn/react-compiler) keeps inline callbacks stable for
+you. Without it, wrap callbacks in `useCallback`.
+
+### Next.js and React Server Components
+
+The package marks itself as a client component (`'use client'`), so you can use it in a Server
+Component. The server sends an empty container, and the report renders in the browser.
+
+```tsx
+// app/report/page.tsx
+import { LighthouseViewer, type LighthouseReport } from 'react-lighthouse-viewer';
+import report from './report.json';
+
+export default function Page() {
+  return <LighthouseViewer report={report as LighthouseReport} />;
+}
+```
+
+### Load the renderer only when it is needed
+
+The renderer is about 200 kB (50 kB gzipped). To keep it out of your main bundle, load it with
+`React.lazy`:
+
+```tsx
+import { lazy } from 'react';
+
+const LighthouseViewer = lazy(() =>
+  import('react-lighthouse-viewer').then((m) => ({ default: m.LighthouseViewer })),
 );
-render(<App />, document.getElementById("root"));
 ```
 
-## To generate lighthouse reports, use CLI
+### Styling and dark mode
 
-### Install lighthouse globally
+The report brings its own styles. They apply only inside the report element (`.lh-vars`).
 
-```sh
-npm install -g lighthouse
+- **Dark mode** follows `prefers-color-scheme`. Set `disableDarkMode` to keep it light.
+- **Theme** with the report's CSS variables:
+
+```css
+.report .lh-vars {
+  --report-font-family: 'Inter', sans-serif;
+  --report-content-max-width: 1200px;
+}
 ```
 
-**Run CLI**: `lighthouse https://blencorp.com --output=json --output-path=./report.json`
+### TypeScript
 
-By default, Lighthouse writes the report to an HTML file. You can control the output format by passing flags.
+The package exports `LighthouseReport` (the Lighthouse result type), `RendererOptions`, and
+`LighthouseViewerProps`. TypeScript widens string literals in imported JSON, so cast imported
+reports: `report as LighthouseReport`.
 
-### CLI options
+`lighthouseVersion` is the Lighthouse version that the package bundles.
 
-```sh
-$ lighthouse --help
+## Make a report
 
-lighthouse <url>
+- **CLI:** `npx lighthouse https://example.com --output=json --output-path=report.json`
+- **Node:** the [`lighthouse` Node API](https://github.com/GoogleChrome/lighthouse/blob/main/docs/readme.md#using-programmatically) returns the report as `runnerResult.lhr`.
+- **PageSpeed Insights API:** the `lighthouseResult` field of the
+  [response](https://developers.google.com/speed/docs/insights/v5/get-started) is a report.
 
-Logging:
-  --verbose  Displays verbose logging                                                                                                      [boolean]
-  --quiet    Displays no progress, debug logs or errors                                                                                    [boolean]
+## Versioning
 
-Configuration:
-  --save-assets                  Save the trace & devtools log to disk                                                                     [boolean]
-  --list-all-audits              Prints a list of all available audits and exits                                                           [boolean]
-  --list-trace-categories        Prints a list of all required trace categories and exits                                                  [boolean]
-  --print-config                 Print the normalized config for the given config and options, then exit.                                  [boolean]
-  --additional-trace-categories  Additional categories to capture with the trace (comma-delimited).
-  --config-path                  The path to the config JSON.
-  --chrome-flags                 Custom flags to pass to Chrome (space-delimited). For a full list of flags, see
-                                 http://peter.sh/experiments/chromium-command-line-switches/.
+The package version is the version of the Lighthouse renderer that it bundles. For example,
+`13.5.0` bundles Lighthouse `13.5.0`. A workflow checks for new Lighthouse releases every day and
+publishes the matching version. Changes to the component itself ship with the next Lighthouse
+release, and the [changelog](https://github.com/blencorp/react-lighthouse-viewer/blob/main/CHANGELOG.md) lists them.
 
-                                 Environment variables:
-                                 CHROME_PATH: Explicit path of intended Chrome binary. If set must point to an executable of a build of
-                                 Chromium version 66.0 or later. By default, any detected Chrome Canary or Chrome (stable) will be launched.
-                                                                                                                                       [default: ""]
-  --port                         The port to use for the debugging protocol. Use 0 for a random port                                    [default: 0]
-  --preset                       Use a built-in configuration.                                            [choices: "full", "perf", "mixed-content"]
-  --hostname                     The hostname to use for the debugging protocol.                                              [default: "localhost"]
-  --max-wait-for-load            The timeout (in milliseconds) to wait before the page is considered done loading and the run should continue.
-                                 WARNING: Very high values can lead to large traces and instability                                 [default: 45000]
-  --emulated-form-factor         Controls the emulated device form factor (mobile vs. desktop) if not disabled                      [choices: "mobile", "desktop", "none"] [default: "mobile"]
-  --enable-error-reporting       Enables error reporting, overriding any saved preference. --no-enable-error-reporting will do the opposite. More:
-                                 https://git.io/vFFTO
-  --gather-mode, -G              Collect artifacts from a connected browser and save to disk. If audit-mode is not also enabled, the run will quit
-                                 early.                                                                                                    [boolean]
-  --audit-mode, -A               Process saved artifacts from disk                                                                         [boolean]
+## Migrate from 6.x
 
-Output:
-  --output       Reporter for the results, supports multiple values                        [choices: "csv", "json", "html"] [default: "html"]
-  --output-path  The file path to output the results. Use 'stdout' to write to stdout.
-                 If using JSON or CSV output, default is stdout.
-                 If using HTML output, default is a file in the working directory with a name based on the test URL and date.
-                 If using multiple outputs, --output-path is appended with the standard extension for each output type. "reports/my-run" -> "reports/my-run.report.html", "reports/my-run.report.json", etc.
-                 Example: --output-path=./lighthouse-results.html
-  --view         Open HTML report in your browser                                                                                          [boolean]
+Version 6.x copied the Lighthouse 6 renderer. Version 13 uses the official renderer.
 
-Options:
-  --help                        Show help                                                                                                  [boolean]
-  --version                     Show version number                                                                                        [boolean]
-  --blocked-url-patterns        Block any network requests to the specified URL patterns                                                     [array]
-  --disable-storage-reset       Disable clearing the browser cache and other storage APIs before a run                                     [boolean]
-  --disable-device-emulation    Disable all device form factor emulation. Deprecated: use --emulated-form-factor=none instead              [boolean]
-  --throttling-method                  Controls throttling method         [choices: "devtools", "provided", "simulate"]
-  --throttling.rttMs                   Controls simulated network RTT (TCP layer)
-  --throttling.throughputKbps          Controls simulated network download throughput
-  --throttling.requestLatencyMs        Controls emulated network RTT (HTTP layer)
-  --throttling.downloadThroughputKbps  Controls emulated network download throughput
-  --throttling.uploadThroughputKbps    Controls emulated network upload throughput
-  --throttling.cpuSlowdownMultiplier   Controls simulated + emulated CPU throttling
-  --extra-headers               Set extra HTTP Headers to pass with request                                                                 [string]
+- React 19 or later is required.
+- Use the named export: `import { LighthouseViewer } from 'react-lighthouse-viewer'`.
+- Rename the `json` prop to `report`.
+- The `id` prop no longer selects the container. Use `ref` to get the container element.
 
-Examples:
-  lighthouse <url> --view                                                   Opens the HTML report in a browser after the run completes
-  lighthouse <url> --config-path=./myconfig.js                              Runs Lighthouse with your own configuration: custom audits, report
-                                                                            generation, etc.
-  lighthouse <url> --output=json --output-path=./report.json --save-assets  Save trace, devtoolslog, and named JSON report.
-  lighthouse <url> --disable-device-emulation                               Disable device emulation and all throttling.
-    --throttling-method=provided
-  lighthouse <url> --chrome-flags="--window-size=412,660"                   Launch Chrome with a specific window size
-  lighthouse <url> --quiet --chrome-flags="--headless"                      Launch Headless Chrome, turn off logging
-  lighthouse <url> --extra-headers "{\"Cookie\":\"monster=blue\"}"          Stringify\'d JSON HTTP Header key/value pairs to send in requests
-  lighthouse <url> --extra-headers=./path/to/file.json                      Path to JSON file of HTTP Header key/value pairs to send in requests
-
-For more information on Lighthouse, see https://developers.google.com/web/tools/lighthouse/.
+```diff
+- import ReportViewer from 'react-lighthouse-viewer';
+- <ReportViewer json={report} id="my-report" />
++ import { LighthouseViewer } from 'react-lighthouse-viewer';
++ <LighthouseViewer report={report} />
 ```
 
-## Cool Guide by Brad Stiff
+## Limitations
 
-**A guide to building a React component with webpack 4, publishing to npm, and deploying the demo to GitHub Pages** [Read more](https://medium.com/dailyjs/building-a-react-component-with-webpack-publish-to-npm-deploy-to-github-guide-6927f60b3220) :+1:
+- The package renders single reports. It does not render user flow reports (`FlowResult`).
+- With the top bar on, the Lighthouse renderer adds `copy` and `afterprint` listeners to the page
+  that it does not remove. If your app mounts and unmounts many reports, set `omitTopbar`.
 
----
+## Contributing
 
-Hacked with ❤️ by [BLEN](https://blencorp.com) Corp in Washington, DC.
+See [CONTRIBUTING.md](https://github.com/blencorp/react-lighthouse-viewer/blob/main/CONTRIBUTING.md).
+
+## License
+
+[Apache-2.0](https://github.com/blencorp/react-lighthouse-viewer/blob/main/LICENSE). The bundled Lighthouse renderer is © Google LLC, also under Apache-2.0
+(see [NOTICE](https://github.com/blencorp/react-lighthouse-viewer/blob/main/NOTICE)).
+
+Made by [BLEN](https://blencorp.com) in Washington, DC.
