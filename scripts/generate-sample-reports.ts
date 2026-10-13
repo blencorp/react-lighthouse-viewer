@@ -7,12 +7,12 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const sites = [
-  { slug: 'react-dev', url: 'https://react.dev/' },
-  { slug: 'github', url: 'https://github.com/' },
-  { slug: 'wikipedia', url: 'https://www.wikipedia.org/' },
-  { slug: 'mdn', url: 'https://developer.mozilla.org/' },
-  { slug: 'usa-gov', url: 'https://www.usa.gov/' },
   { slug: 'blen', url: 'https://www.blencorp.com/' },
+  { slug: 'usa-gov', url: 'https://www.usa.gov/' },
+  { slug: 'nasa', url: 'https://www.nasa.gov/' },
+  { slug: 'va', url: 'https://www.va.gov/' },
+  { slug: 'login-gov', url: 'https://login.gov/' },
+  { slug: 'weather-gov', url: 'https://www.weather.gov/' },
 ];
 
 type Report = {
