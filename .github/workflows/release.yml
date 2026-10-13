@@ -28,9 +28,11 @@ jobs:
         run: |
           version=$(node -p "require('./packages/react-lighthouse-viewer/package.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if npm view "@blen/react-lighthouse-viewer@$version" version > /dev/null 2>&1; then
+          # npm can take minutes to list a new version, so the release tag also counts as published.
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null ||
+            npm view "@blen/react-lighthouse-viewer@$version" version > /dev/null 2>&1; then
             echo "unpublished=false" >> "$GITHUB_OUTPUT"
-            echo "@blen/react-lighthouse-viewer@$version is already on npm."
+            echo "@blen/react-lighthouse-viewer@$version is already released."
           else
             echo "unpublished=true" >> "$GITHUB_OUTPUT"
           fi
