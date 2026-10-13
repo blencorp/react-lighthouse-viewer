@@ -1,7 +1,6 @@
-import { Suspense, useState, useTransition } from 'react';
+import { Suspense, use, useDeferredValue, useState } from 'react';
 import {
   fetchLighthouseReport,
-  type LighthouseReport,
   LighthouseViewer,
   lighthouseVersion,
   type RendererOptions,
@@ -9,45 +8,67 @@ import {
 import { CodeTabs } from './code-block.tsx';
 import { ErrorBoundary } from './error-boundary.tsx';
 import { Install } from './install.tsx';
-import { loadFile, loadIndex, loadSample } from './reports.ts';
+import { LighthouseLogo } from './lighthouse-logo.tsx';
+import {
+  hostOf,
+  loadFile,
+  loadIndex,
+  noSamplesView,
+  type ReportView,
+  sampleView,
+} from './reports.ts';
 import { SampleGrid } from './sample-grid.tsx';
 import { snippets } from './snippets.ts';
 import { Switch } from './switch.tsx';
+import { useHash } from './use-hash.ts';
 
 const indexPromise = loadIndex();
-const initialSlug = decodeURIComponent(location.hash.slice(1));
 
 export function App() {
-  // An empty slug means "the first sample", which is known only after the index loads.
-  const [selected, setSelected] = useState(initialSlug);
-  const [title, setTitle] = useState('');
-  // The report is a promise in state. The viewer suspends while it loads.
-  const [report, setReport] = useState(() =>
-    initialSlug ? loadSample(initialSlug) : loadFirstSample(),
-  );
+  const samples = use(indexPromise);
+  const hash = useHash();
+  // A report the user opened from a URL or a file. It shows while the URL has no hash.
+  const [custom, setCustom] = useState<ReportView | null>(null);
   const [darkMode, setDarkMode] = useState(true);
   const [topbar, setTopbar] = useState(true);
   const [dragging, setDragging] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
-  // A transition keeps the current report on screen while the next one loads.
-  const show = (slug: string, name: string, next: Promise<LighthouseReport>) =>
-    startTransition(() => {
-      setSelected(slug);
-      setTitle(name);
-      setReport(next);
-      history.replaceState(null, '', slug.includes(':') ? location.pathname : `#${slug}`);
-    });
+  const first = samples[0];
+  const view = hash
+    ? sampleView(hash)
+    : (custom ?? (first ? sampleView(first.slug) : noSamplesView()));
+  // While the next report loads, React keeps showing the current one.
+  const shown = useDeferredValue(view);
+  const loading = shown !== view;
 
-  // A form action runs in a transition, so the current report stays until the new one loads.
+  const sample = samples.find((item) => item.slug === shown.key);
+  const title = sample ? hostOf(sample.url) : shown.name;
+  const activeSlug = hash || (custom ? undefined : first?.slug);
+
+  const selectSample = (slug: string) => {
+    setCustom(null);
+    location.hash = slug;
+  };
+
+  const showCustom = (next: ReportView) => {
+    // Clear the hash without a history entry, so the custom report is what the page shows.
+    history.replaceState(null, '', location.pathname + location.search);
+    setCustom(next);
+  };
+
   const openUrl = (formData: FormData) => {
     const value = formData.get('url');
     const url = typeof value === 'string' ? value.trim() : '';
-    if (url) show(`url:${url}`, url, fetchLighthouseReport(url));
+    if (url) showCustom({ key: `url:${url}`, name: url, report: fetchLighthouseReport(url) });
   };
 
   const openFile = (file: File | undefined) => {
-    if (file) show(`file:${file.name}`, file.name, loadFile(file));
+    if (file)
+      showCustom({
+        key: `file:${file.name}:${file.lastModified}`,
+        name: file.name,
+        report: loadFile(file),
+      });
   };
 
   const options: RendererOptions = { disableDarkMode: !darkMode, omitTopbar: !topbar };
@@ -84,7 +105,10 @@ export function App() {
 
       <section className="hero container">
         <div className="hero-text">
-          <p className="eyebrow">Lighthouse {lighthouseVersion} renderer · React 19</p>
+          <p className="eyebrow">
+            <LighthouseLogo />
+            Powered by the official Lighthouse {lighthouseVersion} renderer
+          </p>
           <h1>Lighthouse reports, inside your React app.</h1>
           <p className="lede">
             Render any Lighthouse JSON report with the official Lighthouse renderer. Typed, server
@@ -100,22 +124,16 @@ export function App() {
           <h2 id="samples-title">Sample reports</h2>
           <p>Fresh Lighthouse runs. Pick a site to open its full report.</p>
         </div>
-        <Suspense fallback={<div className="grid-skeleton" />}>
-          <SampleGrid
-            samples={indexPromise}
-            selected={selected}
-            onSelect={(slug, host) => show(slug, host, loadSample(slug))}
-          />
-        </Suspense>
+        <SampleGrid samples={samples} active={activeSlug} onSelect={selectSample} />
       </section>
 
       <section className="container section viewer" aria-label="Report">
         <div className="toolbar">
           <div className="toolbar-row">
             <div className="toolbar-title">
-              {isPending ? <span className="spinner" aria-label="Loading" /> : null}
+              {loading ? <span className="spinner" aria-label="Loading" /> : null}
               <span className="toolbar-name" title={title}>
-                {title || 'Report'}
+                {title}
               </span>
             </div>
             <div className="toolbar-actions">
@@ -150,8 +168,8 @@ export function App() {
         <div className="report-frame">
           <Suspense fallback={<p className="message">Loading report…</p>}>
             {/* A new report gets a new boundary, so an earlier error does not stick. */}
-            <ErrorBoundary key={selected} FallbackComponent={ReportError}>
-              <LighthouseViewer report={report} options={options} />
+            <ErrorBoundary key={shown.key} FallbackComponent={ReportError}>
+              <LighthouseViewer report={shown.report} options={options} aria-label={title} />
             </ErrorBoundary>
           </Suspense>
         </div>
@@ -161,7 +179,10 @@ export function App() {
         <span>
           Made by <a href="https://blencorp.com">BLEN</a>. Apache-2.0.
         </span>
-        <span>Lighthouse is a Google project. Reports stay in your browser.</span>
+        <span>
+          Lighthouse is a Google project. This site is not affiliated with Google. Reports stay in
+          your browser.
+        </span>
       </footer>
 
       {dragging && (
@@ -173,12 +194,6 @@ export function App() {
   );
 }
 
-async function loadFirstSample(): Promise<LighthouseReport> {
-  const [first] = await indexPromise;
-  if (!first) throw new Error('There are no sample reports yet. Open your own report to view it.');
-  return loadSample(first.slug);
-}
-
 function ReportError({ error }: { error: Error }) {
   return (
     <p className="message error" role="alert">
@@ -187,12 +202,20 @@ function ReportError({ error }: { error: Error }) {
   );
 }
 
+// Our own mark, kept different from the official Lighthouse logo, which is a Google trademark.
 function LighthouseMark() {
   return (
     <svg className="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 2 9 6h6l-3-4Z" fill="currentColor" />
-      <path d="M9 7h6l1.6 15H7.4L9 7Z" fill="currentColor" opacity=".9" />
-      <path d="M8.6 11h6.8l.3 3H8.3l.3-3Z" fill="var(--page-bg)" />
+      <path
+        d="M8.6 6.4 3.5 4.6v4.2l5.1-1.6ZM15.4 6.4l5.1-1.8v4.2l-5.1-1.6Z"
+        fill="#fff"
+        opacity=".55"
+      />
+      <path d="M9.2 5 12 2.6 14.8 5Z" fill="#fff" />
+      <rect x="9.6" y="5.6" width="4.8" height="3" rx=".6" fill="#fff" />
+      <path d="M9.9 9.4h4.2l1.3 10.4H8.6Z" fill="#fff" />
+      <path d="M9.45 12.9h5.1l.3 2.3H9.15Z" fill="var(--accent)" />
+      <rect x="6.5" y="19.8" width="11" height="1.8" rx=".9" fill="#fff" />
     </svg>
   );
 }

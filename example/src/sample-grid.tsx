@@ -1,5 +1,4 @@
-import { use } from 'react';
-import { reportsUrl, type SampleSummary } from './reports.ts';
+import { hostOf, reportsUrl, type SampleSummary } from './reports.ts';
 import { ScoreRing } from './score-ring.tsx';
 
 const coreCategories: Record<string, string> = {
@@ -11,15 +10,14 @@ const coreCategories: Record<string, string> = {
 
 export function SampleGrid({
   samples,
-  selected,
+  active,
   onSelect,
 }: {
-  samples: Promise<SampleSummary[]>;
-  selected: string;
-  onSelect: (slug: string, host: string) => void;
+  samples: SampleSummary[];
+  active: string | undefined;
+  onSelect: (slug: string) => void;
 }) {
-  const list = use(samples);
-  if (list.length === 0) {
+  if (samples.length === 0) {
     return (
       <p className="empty">
         Run <code>pnpm reports</code> to generate the sample reports.
@@ -27,15 +25,14 @@ export function SampleGrid({
     );
   }
 
-  const active = selected || list[0]?.slug;
   return (
     <ul className="grid">
-      {list.map((sample) => (
+      {samples.map((sample) => (
         <li key={sample.slug}>
           <SampleCard
             sample={sample}
             active={active === sample.slug}
-            onSelect={() => onSelect(sample.slug, hostOf(sample.url))}
+            onSelect={() => onSelect(sample.slug)}
           />
         </li>
       ))}
@@ -79,8 +76,4 @@ function SampleCard({
       </span>
     </button>
   );
-}
-
-function hostOf(url: string) {
-  return new URL(url).hostname.replace(/^www\./, '');
 }

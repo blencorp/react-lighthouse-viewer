@@ -117,13 +117,17 @@ pre {
 }
 
 .brand-mark {
-  width: 26px;
-  height: 26px;
-  padding: 3px;
-  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  padding: 2px;
+  border-radius: 8px;
   background: var(--accent);
-  color: #fff;
-  --page-bg: var(--accent);
+}
+
+.lighthouse-logo {
+  width: 16px;
+  height: 16px;
+  flex: none;
 }
 
 .nav-links {
@@ -154,7 +158,9 @@ pre {
 }
 
 .eyebrow {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 16px;
   padding: 4px 12px;
   border: 1px solid var(--border);
