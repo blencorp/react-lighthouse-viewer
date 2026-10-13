@@ -3,7 +3,7 @@
 // so the demo always shows fresh reports from the bundled Lighthouse version. A site that fails is
 // left out, so one unreachable site does not block the deploy.
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const sites = [
@@ -25,6 +25,8 @@ type Report = {
 
 const outDir = new URL('../example/public/reports/', import.meta.url);
 const packageDir = new URL('../packages/react-lighthouse-viewer/', import.meta.url);
+// Start empty, so reports from earlier runs or removed sites are not published.
+rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
 const index = [];
@@ -33,13 +35,15 @@ for (const site of sites) {
   console.log(`Running Lighthouse for ${site.url}`);
   try {
     runLighthouse(site.url, file);
-  } catch {
-    console.warn(`Skipping ${site.url}: Lighthouse failed.`);
+  } catch (error) {
+    console.warn(`Skipping ${site.url}: Lighthouse failed. ${String(error)}`);
+    rmSync(file, { force: true });
     continue;
   }
   const report: Report = JSON.parse(readFileSync(file, 'utf8'));
   if (report.runtimeError) {
     console.warn(`Skipping ${site.url}: ${report.runtimeError.message}`);
+    rmSync(file, { force: true });
     continue;
   }
   index.push({

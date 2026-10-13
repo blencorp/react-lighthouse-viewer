@@ -7,7 +7,7 @@ import {
 import { type LoadResult, loadFile, loadIndex, loadSample, type SampleSummary } from './reports.ts';
 
 const indexPromise = loadIndex();
-const initialSlug = decodeURIComponent(location.hash.slice(1));
+const initialSlug = location.hash.slice(1);
 
 export function App() {
   // An empty slug means "the first sample", which is known only after the index loads.
@@ -25,7 +25,11 @@ export function App() {
     startTransition(() => {
       setSelected(slug);
       setResult(next);
-      history.replaceState(null, '', slug && slug !== 'file' ? `#${slug}` : location.pathname);
+      history.replaceState(
+        null,
+        '',
+        slug && slug !== 'file' ? `#${slug}` : location.pathname + location.search,
+      );
     });
 
   const openFile = (file: File | undefined) => {
