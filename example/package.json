@@ -9,9 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@blen/react-lighthouse-viewer": "workspace:*",
     "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "react-lighthouse-viewer": "workspace:*"
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

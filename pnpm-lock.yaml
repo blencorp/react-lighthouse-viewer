@@ -178,15 +178,15 @@ importers:
 
   example:
     dependencies:
+      '@blen/react-lighthouse-viewer':
+        specifier: workspace:*
+        version: link:../packages/react-lighthouse-viewer
       react:
         specifier: 19.3.0
         version: 19.3.0
       react-dom:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
-      react-lighthouse-viewer:
-        specifier: workspace:*
-        version: link:../packages/react-lighthouse-viewer
     devDependencies:
       '@types/react':
         specifier: 19.3.0

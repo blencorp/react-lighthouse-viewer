@@ -19,7 +19,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: react-lighthouse-viewer version
+      label: '@blen/react-lighthouse-viewer version'
       placeholder: 13.5.0
     validations:
       required: true

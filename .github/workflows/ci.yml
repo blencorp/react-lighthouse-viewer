@@ -21,5 +21,5 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - run: pnpm --filter react-lighthouse-viewer exec playwright install --with-deps chromium
+      - run: pnpm --filter @blen/react-lighthouse-viewer exec playwright install --with-deps chromium
       - run: pnpm check

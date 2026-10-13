@@ -1,5 +1,5 @@
 {
-  "name": "react-lighthouse-viewer",
+  "name": "@blen/react-lighthouse-viewer",
   "version": "13.5.0",
   "description": "Render Lighthouse JSON reports in React, using the official Lighthouse report renderer.",
   "keywords": [

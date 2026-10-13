@@ -1,8 +1,8 @@
-# react-lighthouse-viewer
+# @blen/react-lighthouse-viewer
 
-[![npm](https://img.shields.io/npm/v/react-lighthouse-viewer)](https://www.npmjs.com/package/react-lighthouse-viewer)
+[![npm](https://img.shields.io/npm/v/@blen/react-lighthouse-viewer)](https://www.npmjs.com/package/@blen/react-lighthouse-viewer)
 [![CI](https://github.com/blencorp/react-lighthouse-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/blencorp/react-lighthouse-viewer/actions/workflows/ci.yml)
-[![License](https://img.shields.io/npm/l/react-lighthouse-viewer)](https://github.com/blencorp/react-lighthouse-viewer/blob/main/LICENSE)
+[![License](https://img.shields.io/npm/l/@blen/react-lighthouse-viewer)](https://github.com/blencorp/react-lighthouse-viewer/blob/main/LICENSE)
 
 Render [Lighthouse](https://github.com/GoogleChrome/lighthouse) JSON reports in React, with the
 official Lighthouse report renderer.
@@ -13,7 +13,7 @@ official Lighthouse report renderer.
 
 - The report looks and works like the HTML report Lighthouse writes, because it uses the same renderer.
 - Renders reports from Lighthouse 6 and later.
-- The version matches Lighthouse: `react-lighthouse-viewer@13.5.0` bundles the Lighthouse 13.5.0 renderer.
+- The version matches Lighthouse: `@blen/react-lighthouse-viewer@13.5.0` bundles the Lighthouse 13.5.0 renderer.
 - No runtime dependencies. React 19 is the only peer dependency.
 - TypeScript types for the report and the renderer options.
 - Works with server rendering and React Server Components (it is a client component).
@@ -21,13 +21,13 @@ official Lighthouse report renderer.
 ## Install
 
 ```sh
-npm install react-lighthouse-viewer
+npm install @blen/react-lighthouse-viewer
 ```
 
 ## Usage
 
 ```tsx
-import { LighthouseViewer } from 'react-lighthouse-viewer';
+import { LighthouseViewer } from '@blen/react-lighthouse-viewer';
 
 export function Report({ report }) {
   return <LighthouseViewer report={report} />;
@@ -43,7 +43,7 @@ Fetch the report and read it with React's `use`:
 
 ```tsx
 import { Suspense, use } from 'react';
-import { LighthouseViewer, type LighthouseReport } from 'react-lighthouse-viewer';
+import { LighthouseViewer, type LighthouseReport } from '@blen/react-lighthouse-viewer';
 
 const reportPromise: Promise<LighthouseReport> = fetch('/report.json').then((res) => res.json());
 
@@ -100,7 +100,7 @@ Component. The server sends an empty container, and the report renders in the br
 
 ```tsx
 // app/report/page.tsx
-import { LighthouseViewer, type LighthouseReport } from 'react-lighthouse-viewer';
+import { LighthouseViewer, type LighthouseReport } from '@blen/react-lighthouse-viewer';
 import report from './report.json';
 
 export default function Page() {
@@ -117,7 +117,7 @@ The renderer is about 200 kB (50 kB gzipped). To keep it out of your main bundle
 import { lazy } from 'react';
 
 const LighthouseViewer = lazy(() =>
-  import('react-lighthouse-viewer').then((m) => ({ default: m.LighthouseViewer })),
+  import('@blen/react-lighthouse-viewer').then((m) => ({ default: m.LighthouseViewer })),
 );
 ```
 
@@ -159,17 +159,23 @@ release, and the [changelog](https://github.com/blencorp/react-lighthouse-viewer
 
 ## Migrate from 6.x
 
-Version 6.x copied the Lighthouse 6 renderer. Version 13 uses the official renderer.
+Version 6.x was published as `react-lighthouse-viewer` and copied the Lighthouse 6 renderer.
+Version 13 is published as `@blen/react-lighthouse-viewer` and uses the official renderer.
+
+```sh
+npm uninstall react-lighthouse-viewer
+npm install @blen/react-lighthouse-viewer
+```
 
 - React 19 or later is required.
-- Use the named export: `import { LighthouseViewer } from 'react-lighthouse-viewer'`.
+- Use the named export: `import { LighthouseViewer } from '@blen/react-lighthouse-viewer'`.
 - Rename the `json` prop to `report`.
 - The `id` prop no longer selects the container. Use `ref` to get the container element.
 
 ```diff
 - import ReportViewer from 'react-lighthouse-viewer';
 - <ReportViewer json={report} id="my-report" />
-+ import { LighthouseViewer } from 'react-lighthouse-viewer';
++ import { LighthouseViewer } from '@blen/react-lighthouse-viewer';
 + <LighthouseViewer report={report} />
 ```
 

@@ -1,4 +1,4 @@
-import { type LighthouseReport, lighthouseVersion } from 'react-lighthouse-viewer';
+import { type LighthouseReport, lighthouseVersion } from '@blen/react-lighthouse-viewer';
 
 export type LoadResult = { name: string; report: LighthouseReport } | { error: string };
 

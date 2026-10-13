@@ -3,13 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter react-lighthouse-viewer build",
+    "build": "pnpm --filter @blen/react-lighthouse-viewer build",
     "dev": "pnpm --filter example dev",
     "lint": "oxlint --type-aware --deny-warnings && oxfmt --check",
     "format": "oxfmt && oxlint --fix",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter react-lighthouse-viewer test",
-    "check": "pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm --filter react-lighthouse-viewer check:package && pnpm --filter example build"
+    "test": "pnpm --filter @blen/react-lighthouse-viewer test",
+    "check": "pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm --filter @blen/react-lighthouse-viewer check:package && pnpm --filter example build"
   },
   "devDependencies": {
     "oxfmt": "0.72.0",

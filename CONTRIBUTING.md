@@ -10,7 +10,7 @@ You need Node.js 24 (see `.nvmrc`) and pnpm. The repo pins the pnpm version in `
 
 ```sh
 pnpm install
-pnpm --filter react-lighthouse-viewer exec playwright install chromium
+pnpm --filter @blen/react-lighthouse-viewer exec playwright install chromium
 ```
 
 ## Repo layout

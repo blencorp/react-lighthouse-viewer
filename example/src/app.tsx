@@ -1,5 +1,9 @@
 import { Suspense, use, useState, useTransition } from 'react';
-import { LighthouseViewer, lighthouseVersion, type RendererOptions } from 'react-lighthouse-viewer';
+import {
+  LighthouseViewer,
+  lighthouseVersion,
+  type RendererOptions,
+} from '@blen/react-lighthouse-viewer';
 import { type LoadResult, loadFile, loadSample, samples } from './reports.ts';
 
 export function App() {
@@ -45,12 +49,12 @@ export function App() {
     >
       <header className="header">
         <div className="title">
-          <h1>react-lighthouse-viewer</h1>
+          <h1>@blen/react-lighthouse-viewer</h1>
           <span className="version">Lighthouse {lighthouseVersion}</span>
         </div>
         <nav className="links">
           <a href="https://github.com/blencorp/react-lighthouse-viewer">GitHub</a>
-          <a href="https://www.npmjs.com/package/react-lighthouse-viewer">npm</a>
+          <a href="https://www.npmjs.com/package/@blen/react-lighthouse-viewer">npm</a>
         </nav>
         <div className="controls">
           <select

@@ -1,4 +1,4 @@
-react-lighthouse-viewer
+@blen/react-lighthouse-viewer
 Copyright 2019-2026 BLEN, Inc.
 
 This product bundles the Lighthouse report renderer and its type definitions
