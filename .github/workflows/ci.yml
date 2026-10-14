@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    # ready_for_review: release pull requests open as drafts, because a pull request that the
+    # default token opens starts no runs. Marking one ready runs CI.
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_call:
 
 permissions:

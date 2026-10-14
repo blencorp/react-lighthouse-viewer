@@ -269,6 +269,43 @@ describe('LighthouseViewer', () => {
     }
   });
 
+  test('requests a src once in StrictMode', async () => {
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => Response.json(reportLatest));
+    const screen = await render(
+      <StrictMode>
+        <LighthouseViewer src="/reports/strict.json" />
+      </StrictMode>,
+    );
+    await expect.poll(() => screen.container.querySelectorAll('article.lh-root').length).toBe(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('shows the error of a rejected report promise', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const screen = await render(
+      <LighthouseViewer report={Promise.reject(new Error('The report store is offline.'))} />,
+    );
+    const alert = screen.getByRole('alert');
+    await expect.element(alert).toBeVisible();
+    expect(alert.element().textContent).toContain('The report store is offline.');
+  });
+
+  test('leaves the query string out of src error messages', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Forbidden', { status: 403 }));
+    const screen = await render(
+      <LighthouseViewer src="https://storage.example/report.json?signature=secret" />,
+    );
+    const alert = screen.getByRole('alert');
+    await expect.element(alert).toBeVisible();
+    expect(alert.element().textContent).toContain(
+      'Could not load https://storage.example/report.json: HTTP 403.',
+    );
+    expect(alert.element().textContent).not.toContain('secret');
+  });
+
   test('analyzes a website url with PageSpeed Insights', async () => {
     const { promise, resolve } = Promise.withResolvers<Response>();
     const fetch = vi.spyOn(globalThis, 'fetch').mockReturnValue(promise);

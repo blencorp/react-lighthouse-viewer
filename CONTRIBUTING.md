@@ -73,7 +73,8 @@ The patch number is ours. You do not change the version by hand.
      a Lighthouse patch, or a release of component changes, raises our patch number.
    - To release component changes without a new Lighthouse, run it by hand: **Actions → Release
      pull request → Run workflow**.
-2. A maintainer reviews and merges the pull request.
+2. The pull request opens as a draft. A maintainer clicks **Ready for review**, which runs CI,
+   then reviews and merges it.
 3. The **Release** workflow sees a version that has no release yet. It runs CI, publishes to npm
    with provenance (npm trusted publishing, no tokens), and creates the tag and the GitHub release.
 4. The **Pages** workflow deploys the example site with fresh sample reports.

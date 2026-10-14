@@ -24,6 +24,10 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The job runs new Lighthouse code, so no write token stays in the git config.
+          # create-pull-request pushes with its own token input.
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - id: lighthouse
         env:
@@ -54,6 +58,9 @@ jobs:
           branch: release/v${{ steps.release.outputs.version }}
           commit-message: Release ${{ steps.release.outputs.version }}
           title: Release ${{ steps.release.outputs.version }}
+          # A pull request opened with the default token starts no CI runs. A maintainer marks it
+          # ready for review, which runs CI as a required check.
+          draft: always-true
           body: |
             Prepares `@blen/react-lighthouse-viewer@${{ steps.release.outputs.version }}`, which bundles the [Lighthouse ${{ steps.release.outputs.lighthouse }}](https://github.com/GoogleChrome/lighthouse/releases/tag/v${{ steps.release.outputs.lighthouse }}) report renderer.
 
@@ -61,4 +68,4 @@ jobs:
             - Moves the changelog's "Unreleased" changes under ${{ steps.release.outputs.version }}.
             - When Lighthouse changed: updates it and regenerates the latest sample report.
 
-            `pnpm check` passed in the workflow run. Merging this pull request publishes ${{ steps.release.outputs.version }} to npm.
+            `pnpm check` passed in the workflow run. Click **Ready for review** to run CI here. Merging this pull request publishes ${{ steps.release.outputs.version }} to npm.
