@@ -6,6 +6,8 @@ renderer changes, see the [Lighthouse releases](https://github.com/GoogleChrome/
 
 ## Unreleased
 
+## 13.5.2
+
 - Server Components can call `isLighthouseReport` and read `lighthouseVersion`. Before, the whole
   package was a client module, and calling them on the server threw an error.
 - When the renderer cannot draw a report, the error message now names the real problem, not
