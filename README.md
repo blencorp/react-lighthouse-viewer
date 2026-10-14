@@ -15,7 +15,7 @@ official Lighthouse report renderer.
 - One prop to show a report: a website `url`, the `src` of a saved report, or a `report` object.
 - Loading, errors and caching are built in. Built for React 19: `use`, Suspense, and promises from Server Components.
 - Renders reports from Lighthouse 6 and later.
-- The version matches Lighthouse: each release bundles the Lighthouse renderer with the same version number.
+- The version follows Lighthouse: `13.5.x` bundles the Lighthouse 13.5 renderer.
 - No runtime dependencies. React 19 is the only peer dependency. Works with npm, pnpm, yarn and bun.
 - Typed props that allow exactly one source, plus a runtime check for untrusted JSON.
 - Works with server rendering and React Server Components (it is a client component).
@@ -267,11 +267,14 @@ It checks the top-level shape the renderer needs (`lighthouseVersion`, `categori
 
 ## Versioning
 
-The package version is the version of the Lighthouse renderer that it bundles. For example,
-`13.5.0` bundles Lighthouse `13.5.0`. A workflow checks for new Lighthouse releases every day and
-opens a pull request for the matching version. When a maintainer merges it, GitHub Actions
-publishes the release to npm with provenance. Changes to the component itself ship with the next
-Lighthouse release, and the [changelog](https://github.com/blencorp/react-lighthouse-viewer/blob/main/CHANGELOG.md) lists them.
+The major and minor version numbers are those of the Lighthouse renderer that the package
+bundles. For example, every `13.5.x` release bundles Lighthouse `13.5.x`. The patch number belongs
+to this package, so component fixes and features can ship without a new Lighthouse release. The
+exact bundled version is in the [changelog](https://github.com/blencorp/react-lighthouse-viewer/blob/main/CHANGELOG.md),
+on each GitHub release, and in the `lighthouseVersion` export.
+
+A workflow checks for new Lighthouse releases every day and opens a pull request for the next
+version. When a maintainer merges it, GitHub Actions publishes the release to npm with provenance.
 
 ## Migrate from 6.x
 

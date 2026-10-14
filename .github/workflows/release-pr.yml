@@ -1,0 +1,59 @@
+name: Release pull request
+
+# Opens a pull request that prepares the next release. Merging it publishes the release.
+# - Every day: when a new Lighthouse version is on npm, bundle it.
+# - Run it by hand to release the component changes listed under "Unreleased" in the changelog.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - id: lighthouse
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          bundled=$(node -p "require('./packages/react-lighthouse-viewer/package.json').devDependencies.lighthouse")
+          latest=$(npm view lighthouse version)
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          if [ "$bundled" != "$latest" ] || [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "prepare=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Already on Lighthouse $latest."
+          fi
+      - id: release
+        name: Prepare the release
+        if: steps.lighthouse.outputs.prepare
+        env:
+          LATEST: ${{ steps.lighthouse.outputs.latest }}
+        run: node scripts/prepare-release.ts "$LATEST"
+      - name: Check
+        if: steps.lighthouse.outputs.prepare
+        run: |
+          pnpm --filter @blen/react-lighthouse-viewer exec playwright install --with-deps chromium
+          pnpm check
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        if: steps.lighthouse.outputs.prepare
+        with:
+          branch: release/v${{ steps.release.outputs.version }}
+          commit-message: Release ${{ steps.release.outputs.version }}
+          title: Release ${{ steps.release.outputs.version }}
+          body: |
+            Prepares `@blen/react-lighthouse-viewer@${{ steps.release.outputs.version }}`, which bundles the [Lighthouse ${{ steps.release.outputs.lighthouse }}](https://github.com/GoogleChrome/lighthouse/releases/tag/v${{ steps.release.outputs.lighthouse }}) report renderer.
+
+            - Sets the package version to ${{ steps.release.outputs.version }}.
+            - Moves the changelog's "Unreleased" changes under ${{ steps.release.outputs.version }}.
+            - When Lighthouse changed: updates it and regenerates the latest sample report.
+
+            `pnpm check` passed in the workflow run. Merging this pull request publishes ${{ steps.release.outputs.version }} to npm.

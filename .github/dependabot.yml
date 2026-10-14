@@ -10,7 +10,7 @@ updates:
       dependencies:
         patterns: ['*']
     ignore:
-      # The Lighthouse sync workflow owns this version, because it sets the package version too.
+      # The release pull request workflow owns this version, because it sets the package version too.
       - dependency-name: lighthouse
   - package-ecosystem: github-actions
     directory: /
