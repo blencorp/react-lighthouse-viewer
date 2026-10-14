@@ -31,7 +31,14 @@ const run = (command: string, args: string[]) =>
 const updatesLighthouse = lighthouse !== bundled;
 const changelogUrl = new URL('../CHANGELOG.md', import.meta.url);
 const changelog = readFileSync(changelogUrl, 'utf8');
-if (!updatesLighthouse && !/## Unreleased\n\n- /.test(changelog)) {
+// CHANGELOG.md always has an "## Unreleased" section, empty or not, above the newest version.
+const match = /^## Unreleased\n([\s\S]*?)(?=^## )/m.exec(changelog);
+if (!match) {
+  console.error('CHANGELOG.md needs an "## Unreleased" heading above the newest version.');
+  process.exit(1);
+}
+const unreleased = match[1]?.trim() ?? '';
+if (!updatesLighthouse && !unreleased) {
   console.error('Nothing to release: Lighthouse is current and "## Unreleased" lists no changes.');
   process.exit(1);
 }
@@ -49,12 +56,13 @@ if (updatesLighthouse) {
 }
 run('npm', ['pkg', 'set', `version=${version}`]);
 
-const bundleLine = updatesLighthouse ? `- Bundle Lighthouse ${lighthouse}.\n` : '';
+// The "## Unreleased" heading stays, empty, so the next change has a place to go.
+const entry = [updatesLighthouse ? `- Bundle Lighthouse ${lighthouse}.` : '', unreleased]
+  .filter(Boolean)
+  .join('\n');
 writeFileSync(
   changelogUrl,
-  changelog.includes('## Unreleased\n\n')
-    ? changelog.replace('## Unreleased\n\n', `## ${version}\n\n${bundleLine}`)
-    : changelog.replace(/^## /m, `## ${version}\n\n${bundleLine}\n## `),
+  changelog.replace(match[0], `## Unreleased\n\n## ${version}\n\n${entry}\n\n`),
 );
 
 console.log(`Prepared ${version} with Lighthouse ${lighthouse}.`);

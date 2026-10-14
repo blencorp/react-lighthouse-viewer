@@ -13,7 +13,8 @@ updates:
       # The release pull request workflow owns this version, because it sets the package version too.
       - dependency-name: lighthouse
   - package-ecosystem: github-actions
-    directory: /
+    # The composite setup action pins actions too.
+    directories: ['/', '/.github/actions/*']
     schedule:
       interval: weekly
     cooldown:

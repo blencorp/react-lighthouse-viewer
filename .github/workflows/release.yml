@@ -16,6 +16,8 @@ concurrency:
 
 jobs:
   version:
+    # Only main publishes, so a manual run on another branch cannot release unreviewed code.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}

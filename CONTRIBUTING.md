@@ -43,16 +43,16 @@ secret.
 
 Run these from the repo root:
 
-| Command          | What it does                                                           |
-| ---------------- | ---------------------------------------------------------------------- |
-| `pnpm dev`       | Starts the demo site. Run `pnpm build` and `pnpm reports` first.       |
-| `pnpm reports`   | Runs Lighthouse on the demo websites to make the sample reports.       |
-| `pnpm build`     | Builds the package with tsdown.                                        |
-| `pnpm test`      | Runs the tests in Chromium (Vitest browser mode) and the server tests. |
-| `pnpm lint`      | Runs Oxlint and checks formatting with oxfmt.                          |
-| `pnpm format`    | Formats the code and applies lint fixes.                               |
-| `pnpm typecheck` | Type checks all projects.                                              |
-| `pnpm check`     | Runs everything that CI runs.                                          |
+| Command          | What it does                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`       | Starts the demo site. Run `pnpm build` and `pnpm reports` first.                                        |
+| `pnpm reports`   | Runs Lighthouse on the demo websites to make the sample reports. Needs Google Chrome, or `CHROME_PATH`. |
+| `pnpm build`     | Builds the package with tsdown.                                                                         |
+| `pnpm test`      | Runs the tests in Chromium (Vitest browser mode) and the server tests.                                  |
+| `pnpm lint`      | Runs Oxlint and checks formatting with oxfmt.                                                           |
+| `pnpm format`    | Formats the code and applies lint fixes.                                                                |
+| `pnpm typecheck` | Type checks all projects.                                                                               |
+| `pnpm check`     | Runs everything that CI runs.                                                                           |
 
 ## Pull requests
 

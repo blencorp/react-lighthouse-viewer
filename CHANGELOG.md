@@ -4,6 +4,18 @@ Each version bundles the Lighthouse report renderer with the same major and mino
 (`13.5.x` bundles Lighthouse 13.5). This file lists the changes to the component itself. For
 renderer changes, see the [Lighthouse releases](https://github.com/GoogleChrome/lighthouse/releases).
 
+## Unreleased
+
+- Server Components can call `isLighthouseReport` and read `lighthouseVersion`. Before, the whole
+  package was a client module, and calling them on the server threw an error.
+- When the renderer cannot draw a report, the error message now names the real problem, not
+  "Cannot read properties of null".
+- A relative `src`, such as `report.json`, loads again on a different page, because it points to a
+  different file there.
+- `fallback={null}` shows nothing while the report loads, as `<Suspense fallback={null}>` does.
+- Optional props accept `undefined`, for projects that use `exactOptionalPropertyTypes`.
+- The props no longer accept `dangerouslySetInnerHTML`, which could not work.
+
 ## 13.5.1
 
 - The patch version now belongs to this package, so component changes can ship before the next

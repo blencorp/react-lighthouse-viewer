@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
 
+# A scheduled run and a manual run would otherwise push to the same release branch.
+concurrency:
+  group: release-pr
+  cancel-in-progress: false
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
