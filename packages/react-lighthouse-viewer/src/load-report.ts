@@ -45,7 +45,8 @@ export function forgetReport(key: string) {
 /** Loads a saved Lighthouse JSON report. */
 export function loadReportFile(src: string): Promise<LighthouseReport> {
   // Error messages show the address without its query string, which can hold a signed token.
-  const shown = src.replace(/[?#].*$/, '');
+  const queryStart = src.search(/[?#]/);
+  const shown = queryStart === -1 ? src : src.slice(0, queryStart);
   return cached(reportKey({ src }), async () => {
     const response = await fetch(src);
     if (!response.ok) throw new Error(`Could not load ${shown}: HTTP ${response.status}.`);
