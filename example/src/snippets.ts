@@ -8,7 +8,7 @@ export const packageManagers = [
 const fromWebsite = `import { LighthouseViewer } from '@blen/react-lighthouse-viewer';
 
 // PageSpeed Insights runs Lighthouse on the site. A key in the browser is public:
-// restrict it, or call PageSpeed from your server. See docs/pagespeed-api-key.md.
+// restrict it, or call PageSpeed from your server (see the API key guide in the README).
 export function App() {
   return (
     <LighthouseViewer
