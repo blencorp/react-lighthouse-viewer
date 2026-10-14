@@ -13,7 +13,8 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Let a started deploy finish; the next run deploys right after it.
+  cancel-in-progress: false
 
 jobs:
   build:

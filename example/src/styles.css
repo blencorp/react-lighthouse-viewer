@@ -5,16 +5,20 @@
   --surface-2: #f4f4f5;
   --border: #e4e4e7;
   --text: #18181b;
-  --muted: #71717a;
-  --accent: #e5383b;
+  --muted: #636369;
+  --accent: #d62828;
   --accent-text: #ffffff;
   --code-bg: #18181b;
   --code-text: #e4e4e7;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
-  /* Lighthouse's own score colors. */
-  --pass: #0cce6b;
-  --average: #ffa400;
-  --fail: #ff4e42;
+  /* Score colors from the Lighthouse report: bright for rings, darker for text on light
+     backgrounds, so the text meets WCAG AA contrast. */
+  --pass: #0c6;
+  --average: #fa3;
+  --fail: #f33;
+  --pass-text: #080;
+  --average-text: #c33300;
+  --fail-text: #c00;
   --radius: 14px;
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
@@ -33,6 +37,9 @@
     --text: #fafafa;
     --muted: #a1a1aa;
     --code-bg: #0f0f12;
+    --pass-text: var(--pass);
+    --average-text: var(--average);
+    --fail-text: #ff6b6b;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.3);
   }
 }
@@ -104,9 +111,26 @@ pre {
   filter: brightness(1.08);
 }
 
-:focus-visible {
+:focus-visible,
+.button:has(input:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Hidden on screen, but still focusable and read by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.page-loading {
+  padding: 64px 24px;
+  color: var(--muted);
+  text-align: center;
 }
 
 /* Navigation */
@@ -202,6 +226,12 @@ h1 {
   max-width: 100%;
 }
 
+.segmented,
+.code-tabs {
+  min-inline-size: 0;
+  margin: 0;
+}
+
 .segmented {
   display: inline-flex;
   padding: 3px;
@@ -221,7 +251,7 @@ h1 {
   cursor: pointer;
 }
 
-.segmented button[aria-selected='true'] {
+.segmented button[aria-pressed='true'] {
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
@@ -276,6 +306,7 @@ h1 {
 
 .code-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   padding: 8px 10px;
@@ -287,6 +318,8 @@ h1 {
 .code-tabs {
   display: flex;
   gap: 4px;
+  padding: 0;
+  border: 0;
 }
 
 .code-tab {
@@ -304,15 +337,19 @@ h1 {
   color: #e4e4e7;
 }
 
-.code-tab[aria-selected='true'] {
+.code-tab[aria-pressed='true'] {
   background: #27272a;
   color: #fafafa;
 }
 
 .code-filename {
   flex: 1;
-  color: #71717a;
+  min-width: 0;
+  overflow: hidden;
+  color: #a1a1aa;
   text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .code .copy-button {
@@ -331,7 +368,7 @@ h1 {
 }
 
 .tok-comment {
-  color: #71717a;
+  color: #a1a1aa;
 }
 
 .tok-string {
@@ -385,12 +422,6 @@ h2 {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.grid-skeleton {
-  height: 280px;
-  border-radius: var(--radius);
-  background: var(--surface-2);
 }
 
 .card {
@@ -508,7 +539,7 @@ h2 {
   place-items: center;
   width: 44px;
   height: 44px;
-  color: var(--ring-color);
+  color: var(--ring-text);
   font-size: 12.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -521,14 +552,17 @@ h2 {
 
 .ring[data-rating='pass'] {
   --ring-color: var(--pass);
+  --ring-text: var(--pass-text);
 }
 
 .ring[data-rating='average'] {
   --ring-color: var(--average);
+  --ring-text: var(--average-text);
 }
 
 .ring[data-rating='fail'] {
   --ring-color: var(--fail);
+  --ring-text: var(--fail-text);
 }
 
 /* Report viewer */
@@ -598,6 +632,9 @@ h2 {
 
 .report-frame {
   min-height: 400px;
+  /* hidden, not clip: as a scroll container, the frame keeps the report's sticky score header
+     off. That header is fixed to the window and expects the report at the top of the page, so on
+     this page it would cover the site's own header. */
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 0 0 var(--radius) var(--radius);
@@ -637,7 +674,7 @@ h2 {
   width: 34px;
   height: 20px;
   border-radius: 999px;
-  background: var(--border);
+  background: var(--muted);
   transition: background 0.15s;
 }
 
@@ -659,9 +696,6 @@ h2 {
 
 .switch[aria-checked='true'] .switch-thumb {
   background: var(--surface);
-}
-
-.switch[aria-checked='true'] .switch-thumb {
   transform: translateX(14px);
 }
 
@@ -676,7 +710,7 @@ h2 {
 }
 
 .lh-viewer-error {
-  color: var(--fail);
+  color: var(--fail-text);
 }
 
 /* Drag and drop */
@@ -693,6 +727,8 @@ h2 {
 }
 
 .drop-box {
+  /* The overlay alone gets drag events, so moving over this box does not end the drag. */
+  pointer-events: none;
   width: min(560px, 100%);
   padding: 72px 24px;
   border: 2px dashed #fff;
@@ -766,5 +802,21 @@ h2 {
   .code pre {
     max-height: 300px;
     font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .switch-track,
+  .switch-thumb {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  .spinner {
+    animation-duration: 2s;
   }
 }

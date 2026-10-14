@@ -18,9 +18,14 @@ const indexPromise = loadIndex();
 
 export function App() {
   const samples = use(indexPromise);
-  const hash = useHash();
-  // A website or file the user opened. It shows while the URL has no hash.
-  const [custom, setCustom] = useState<View | null>(null);
+  // A hash that names no sample (a stale link, or a site that failed on the last deploy) shows the
+  // first sample instead of an error.
+  const rawHash = useHash();
+  const hash = samples.some((sample) => sample.slug === rawHash) ? rawHash : '';
+  // A website or file the user opened, and the hash it replaced. It shows until the hash changes,
+  // so the back button and the sample links still work. The URL is not changed while Analyze
+  // runs, because other updates in that time would read the new URL before the report is ready.
+  const [custom, setCustom] = useState<{ view: View; at: string } | null>(null);
   const [darkMode, setDarkMode] = useState(true);
   const [topbar, setTopbar] = useState(true);
   const [dragging, setDragging] = useState(false);
@@ -33,24 +38,25 @@ export function App() {
     return sample ? hostOf(sample.url) : slug;
   };
   const first = samples[0];
-  const view = hash
-    ? sampleView(hash, titleOf(hash))
-    : (custom ?? (first ? sampleView(first.slug, titleOf(first.slug)) : null));
+  const customView = custom?.at === hash ? custom.view : null;
+  const view =
+    customView ??
+    (hash
+      ? sampleView(hash, titleOf(hash))
+      : first
+        ? sampleView(first.slug, titleOf(first.slug))
+        : null);
   // While the next report loads, React keeps showing the current one.
   const shown = useDeferredValue(view);
   const loading = shown !== view;
-  const activeSlug = hash || (custom ? undefined : first?.slug);
+  const activeSlug = customView ? undefined : hash || first?.slug;
 
   const selectSample = (slug: string) => {
     setCustom(null);
     location.hash = slug;
   };
 
-  const showCustom = (next: View) => {
-    // Clear the hash without a history entry, so the custom report is what the page shows.
-    history.replaceState(null, '', location.pathname + location.search);
-    setCustom(next);
-  };
+  const showCustom = (next: View) => setCustom({ view: next, at: hash });
 
   const analyze = () => {
     const trimmed = address.trim();
@@ -67,13 +73,13 @@ export function App() {
     <div
       className="page"
       onDragOver={(event) => {
+        // Only files open a report. Dragged text, links and images keep their usual behavior.
+        if (!event.dataTransfer.types.includes('Files')) return;
         event.preventDefault();
         setDragging(true);
       }}
-      onDragLeave={(event) => {
-        if (!event.relatedTarget) setDragging(false);
-      }}
       onDrop={(event) => {
+        if (!event.dataTransfer.types.includes('Files')) return;
         event.preventDefault();
         setDragging(false);
         openFile(event.dataTransfer.files[0]);
@@ -118,11 +124,11 @@ export function App() {
         <SampleGrid samples={samples} active={activeSlug} onSelect={selectSample} />
       </section>
 
-      <section className="container section viewer" aria-label="Report">
+      <section className="container section viewer" aria-label={shown?.title ?? 'Report'}>
         <div className="toolbar">
           <div className="toolbar-row">
             <div className="toolbar-title">
-              {loading ? <span className="spinner" aria-label="Loading" /> : null}
+              {loading ? <output className="spinner" aria-label="Loading" /> : null}
               <span className="toolbar-name" title={shown?.title}>
                 {shown?.title ?? 'Report'}
               </span>
@@ -139,6 +145,11 @@ export function App() {
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
                 required
+                pattern=".*\S.*"
+                inputMode="url"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder="Analyze a website (www.example.gov) or paste a report .json URL"
                 aria-label="Website or report URL"
               />
@@ -149,17 +160,21 @@ export function App() {
               <input
                 type="file"
                 accept="application/json,.json"
-                hidden
-                onChange={(event) => openFile(event.target.files?.[0])}
+                className="visually-hidden"
+                onChange={(event) => {
+                  openFile(event.currentTarget.files?.[0]);
+                  // Chrome fires no change event for the same file again, so clear the choice.
+                  event.currentTarget.value = '';
+                }}
               />
             </label>
           </div>
         </div>
         <div className="report-frame">
           {shown ? (
-            <LighthouseViewer {...shown.source} options={options} aria-label={shown.title} />
+            <LighthouseViewer {...shown.source} options={options} />
           ) : (
-            <p className="lh-viewer-error">
+            <p className="empty">
               There are no sample reports yet. Analyze a website or open your own report.
             </p>
           )}
@@ -171,13 +186,14 @@ export function App() {
           Made by <a href="https://blencorp.com">BLEN</a>. Apache-2.0.
         </span>
         <span>
-          Lighthouse is a Google project. This site is not affiliated with Google. Reports stay in
-          your browser.
+          Lighthouse is a Google project. This site is not affiliated with Google. Files you open
+          stay in your browser. Analyze sends the address to Google PageSpeed Insights.
         </span>
       </footer>
 
       {dragging && (
-        <div className="drop-overlay" aria-hidden="true">
+        // The overlay covers the page, so leaving it means the drag left the window.
+        <div className="drop-overlay" aria-hidden="true" onDragLeave={() => setDragging(false)}>
           <div className="drop-box">Drop a Lighthouse JSON report</div>
         </div>
       )}

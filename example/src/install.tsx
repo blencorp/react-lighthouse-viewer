@@ -9,19 +9,18 @@ export function Install() {
 
   return (
     <div className="install-block">
-      <div className="segmented" role="tablist" aria-label="Package manager">
+      <fieldset className="segmented" aria-label="Package manager">
         {packageManagers.map((item, index) => (
           <button
             key={item.name}
             type="button"
-            role="tab"
-            aria-selected={index === active}
+            aria-pressed={index === active}
             onClick={() => setActive(index)}
           >
             {item.name}
           </button>
         ))}
-      </div>
+      </fieldset>
       <div className="install">
         <code>{manager.command}</code>
         <CopyButton text={manager.command} label="Copy the install command" />

@@ -19,7 +19,7 @@ type Report = {
   lighthouseVersion: string;
   fetchTime: string;
   finalDisplayedUrl: string;
-  categories: Record<string, { title: string; score: number | null }>;
+  categories: Record<string, { score: number | null }>;
   audits: Record<string, { details?: { data?: string } }>;
   runtimeError?: { message: string };
 };
@@ -34,14 +34,15 @@ const index = [];
 for (const site of sites) {
   const file = new URL(`${site.slug}.json`, outDir);
   console.log(`Running Lighthouse for ${site.url}`);
+  let report: Report;
   try {
     runLighthouse(site.url, file);
+    report = JSON.parse(readFileSync(file, 'utf8'));
   } catch (error) {
     console.warn(`Skipping ${site.url}: Lighthouse failed. ${String(error)}`);
     rmSync(file, { force: true });
     continue;
   }
-  const report: Report = JSON.parse(readFileSync(file, 'utf8'));
   if (report.runtimeError) {
     console.warn(`Skipping ${site.url}: ${report.runtimeError.message}`);
     rmSync(file, { force: true });
@@ -55,7 +56,6 @@ for (const site of sites) {
     fetchTime: report.fetchTime,
     scores: Object.entries(report.categories).map(([id, category]) => ({
       id,
-      title: category.title,
       score: category.score,
     })),
   });
@@ -89,6 +89,7 @@ function runLighthouse(url: string, file: URL) {
       `--output-path=${fileURLToPath(file)}`,
       '--chrome-flags=--headless=new --no-sandbox',
     ],
-    { cwd: packageDir, stdio: 'inherit' },
+    // A hung Chrome would otherwise hold the Pages job until the Actions time limit.
+    { cwd: packageDir, stdio: 'inherit', timeout: 180_000 },
   );
 }

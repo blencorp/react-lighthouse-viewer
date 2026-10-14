@@ -60,15 +60,12 @@ function SampleCard({
       <span className="card-body">
         <span className="card-title">{host}</span>
         <span className="card-scores">
-          {sample.scores
-            .filter((s) => s.id in coreCategories && s.score !== null)
-            .map((s) => (
-              <ScoreRing
-                key={s.id}
-                score={Math.round((s.score ?? 0) * 100)}
-                label={coreCategories[s.id] ?? s.title}
-              />
-            ))}
+          {sample.scores.map(({ id, score }) => {
+            const label = coreCategories[id];
+            return label && score !== null ? (
+              <ScoreRing key={id} score={Math.round(score * 100)} label={label} />
+            ) : null;
+          })}
         </span>
         <span className="card-meta">
           Lighthouse {sample.lighthouseVersion} · {date}

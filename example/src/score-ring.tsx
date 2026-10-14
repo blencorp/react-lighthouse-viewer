@@ -1,7 +1,7 @@
 const radius = 15;
 const circumference = 2 * Math.PI * radius;
 
-// The same score ranges and colors as the Lighthouse report.
+// The same score ranges as the Lighthouse report.
 function rating(score: number) {
   if (score >= 90) return 'pass';
   if (score >= 50) return 'average';

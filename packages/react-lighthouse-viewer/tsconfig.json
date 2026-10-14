@@ -1,7 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node", "@vitest/browser-playwright"]
+    "types": ["node", "@vitest/browser-playwright"],
+    "exactOptionalPropertyTypes": true
   },
   "include": ["src", "test", "scripts", "*.config.ts"]
 }

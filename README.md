@@ -16,7 +16,7 @@ official Lighthouse report renderer.
 - Loading, errors and caching are built in. Built for React 19: `use`, Suspense, and promises from Server Components.
 - Renders reports from Lighthouse 6 and later.
 - The version follows Lighthouse: `13.5.x` bundles the Lighthouse 13.5 renderer.
-- No runtime dependencies. React 19 is the only peer dependency. Works with npm, pnpm, yarn and bun.
+- No runtime dependencies. The only peer dependencies are `react` and `react-dom` 19. Works with npm, pnpm, yarn and bun.
 - Typed props that allow exactly one source, plus a runtime check for untrusted JSON.
 - Works with server rendering and React Server Components (it is a client component).
 
@@ -194,8 +194,9 @@ you. Without it, wrap callbacks in `useCallback`.
 
 ### Next.js and React Server Components
 
-The package marks itself as a client component (`'use client'`), so you can use it in a Server
-Component. On the server, it renders the loading state for `url` and `src` (and an empty container
+`LighthouseViewer` is a client component (`'use client'`), so you can use it in a Server
+Component. `isLighthouseReport` and `lighthouseVersion` are plain exports that Server Components
+can call and read. On the server, it renders the loading state for `url` and `src` (and an empty container
 for a `report` object). The report renders in the browser.
 
 A Server Component can also load the report itself and pass the promise down without `await`.
@@ -229,6 +230,9 @@ const LighthouseViewer = lazy(() =>
 The report brings its own styles. They apply only inside the report element (`.lh-vars`).
 
 - **Dark mode** follows `prefers-color-scheme`. Set `disableDarkMode` to keep it light.
+- **Sticky header:** the report's top bar sticks, and a score header appears at the top of the
+  window as you scroll. Both expect the report to be the main content of the page. If the report
+  sits below other content, give the viewer `overflow: hidden` to turn them off.
 - **Theme** with the report's CSS variables:
 
 ```css
@@ -303,8 +307,9 @@ npm install @blen/react-lighthouse-viewer
 - The package renders single reports. It does not render user flow reports (`FlowResult`).
 - Each `url` and `src` result stays cached until the page reloads. To run Lighthouse on the same
   website again, reload the page.
-- With the top bar on, the Lighthouse renderer adds `copy` and `afterprint` listeners to the page
-  that it does not remove. If your app mounts and unmounts many reports, set `omitTopbar`.
+- The Lighthouse renderer adds listeners to the page (for copy, print, screen size and scroll) and
+  has no way to remove them. Each report that renders stays in memory until the page reloads. This
+  matters only for apps that show many reports in one long session.
 
 ## Contributing
 

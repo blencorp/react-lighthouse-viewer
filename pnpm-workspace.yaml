@@ -3,7 +3,7 @@ packages:
   - example
 
 # Wait a day before installing a newly published version, to avoid compromised releases.
-# Lighthouse is exempt so the sync workflow can publish the matching version the same day.
+# Lighthouse is exempt so the release pull request workflow can bundle a new version the day it ships.
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - lighthouse

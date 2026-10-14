@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { CopyButton } from './copy-button.tsx';
 
-type Token = { text: string; kind?: 'comment' | 'string' | 'keyword' | 'tag' | 'fn' };
+type Token = {
+  start: number;
+  text: string;
+  kind?: 'comment' | 'string' | 'keyword' | 'tag' | 'fn';
+};
 type Snippet = { label: string; filename: string; code: string };
 
 // A small highlighter for the fixed snippets on this page. It is not a general TSX parser.
@@ -13,12 +17,12 @@ function highlight(code: string): Token[] {
   const tokens: Token[] = [];
   let last = 0;
   for (const match of code.matchAll(pattern)) {
-    if (match.index > last) tokens.push({ text: code.slice(last, match.index) });
+    if (match.index > last) tokens.push({ start: last, text: code.slice(last, match.index) });
     const group = match.slice(1).findIndex((value) => value !== undefined);
-    tokens.push({ text: match[0], kind: kinds[group] });
+    tokens.push({ start: match.index, text: match[0], kind: kinds[group] });
     last = match.index + match[0].length;
   }
-  tokens.push({ text: code.slice(last) });
+  tokens.push({ start: last, text: code.slice(last) });
   return tokens;
 }
 
@@ -30,30 +34,27 @@ export function CodeTabs({ snippets }: { snippets: Snippet[] }) {
   return (
     <figure className="code">
       <figcaption className="code-header">
-        <span className="code-tabs" role="tablist" aria-label="Examples">
+        <fieldset className="code-tabs" aria-label="Examples">
           {snippets.map((item, index) => (
             <button
               key={item.label}
               type="button"
-              role="tab"
-              aria-selected={index === active}
+              aria-pressed={index === active}
               className="code-tab"
               onClick={() => setActive(index)}
             >
               {item.label}
             </button>
           ))}
-        </span>
+        </fieldset>
         <span className="code-filename">{snippet.filename}</span>
         <CopyButton text={snippet.code} label={`Copy ${snippet.filename}`} />
       </figcaption>
-      <pre role="tabpanel" aria-label={snippet.label}>
+      <pre aria-label={`${snippet.label} example`}>
         <code>
-          {highlight(snippet.code).map((token, index) =>
+          {highlight(snippet.code).map((token) =>
             token.kind ? (
-              // The tokens never change order, so the index is a stable key.
-              // oxlint-disable-next-line react/no-array-index-key
-              <span key={index} className={`tok-${token.kind}`}>
+              <span key={token.start} className={`tok-${token.kind}`}>
                 {token.text}
               </span>
             ) : (

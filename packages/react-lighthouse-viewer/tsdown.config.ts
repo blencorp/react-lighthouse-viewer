@@ -21,6 +21,18 @@ export default defineConfig({
       },
     },
   ],
-  // Next.js and other RSC frameworks need this to treat the component as client-only.
-  banner: "'use client';",
+  outputOptions: {
+    // React Server Components treat every export of a 'use client' file as client-only. So the
+    // component and the renderer go in a 'use client' chunk, and `index.js` and the type guard stay
+    // plain, so Server Components can call `isLighthouseReport` and read `lighthouseVersion`.
+    manualChunks: (id) => {
+      // Declaration modules go through this build too; leave them to the declaration output.
+      if (/\.d\.ts$|\/src\/index\.ts$|\/lighthouse\/package\.json$/.test(id)) return undefined;
+      return id.endsWith('/src/is-lighthouse-report.ts')
+        ? 'is-lighthouse-report'
+        : 'lighthouse-viewer';
+    },
+    chunkFileNames: '[name].js',
+    banner: (chunk) => (chunk.name === 'lighthouse-viewer' ? "'use client';" : ''),
+  },
 });
