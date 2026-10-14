@@ -89,6 +89,16 @@ pre {
   color: var(--accent-text);
 }
 
+.button:disabled {
+  cursor: progress;
+  opacity: 0.8;
+}
+
+.button-primary .spinner {
+  border-color: rgb(255 255 255 / 0.4);
+  border-top-color: #fff;
+}
+
 .button-primary:hover {
   border-color: var(--accent);
   filter: brightness(1.08);
@@ -655,14 +665,17 @@ h2 {
   transform: translateX(14px);
 }
 
-.message {
+/* The viewer's built-in loading and error states. */
+.lh-viewer-loading,
+.lh-viewer-error {
+  display: block;
   margin: 0;
   padding: 64px 24px;
   color: var(--muted);
   text-align: center;
 }
 
-.error {
+.lh-viewer-error {
   color: var(--fail);
 }
 

@@ -26,6 +26,9 @@ jobs:
       - run: pnpm build
       - run: pnpm reports
       - run: pnpm --filter example build
+        env:
+          # A browser key restricted to blencorp.github.io (see docs/pagespeed-api-key.md).
+          VITE_PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

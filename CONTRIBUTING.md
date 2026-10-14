@@ -13,12 +13,27 @@ pnpm install
 pnpm --filter @blen/react-lighthouse-viewer exec playwright install chromium
 ```
 
+### PageSpeed Insights key (optional)
+
+The demo's "Analyze" box runs Lighthouse through PageSpeed Insights. Without a key it shares a
+public quota that is often used up. To use your own key locally, create
+`example/.env.local` (Git ignores it):
+
+```sh
+VITE_PAGESPEED_API_KEY=your-key
+```
+
+[docs/pagespeed-api-key.md](./docs/pagespeed-api-key.md) explains how to create and restrict a
+key. The Pages workflow reads the deployed site's key from the `PAGESPEED_API_KEY` repository
+secret.
+
 ## Repo layout
 
 | Path                                 | What it is                                                              |
 | ------------------------------------ | ----------------------------------------------------------------------- |
 | `packages/react-lighthouse-viewer`   | The published package.                                                  |
 | `example`                            | The demo site, deployed to GitHub Pages.                                |
+| `docs`                               | Guides, such as the PageSpeed Insights API key.                         |
 | `scripts/sync-lighthouse.ts`         | Updates the bundled Lighthouse version.                                 |
 | `scripts/generate-sample-reports.ts` | Makes the demo sample reports. They are not committed.                  |
 | `scripts/check-install.ts`           | Installs the packed package with npm, pnpm, yarn or bun and imports it. |

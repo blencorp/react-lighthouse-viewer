@@ -5,25 +5,23 @@ export const packageManagers = [
   { name: 'bun', command: 'bun add @blen/react-lighthouse-viewer' },
 ];
 
-const fromUrl = `import { Suspense } from 'react';
-import { ErrorBoundary } from 'react-error-boundary';
-import {
-  fetchLighthouseReport,
-  LighthouseViewer,
-} from '@blen/react-lighthouse-viewer';
+const fromWebsite = `import { LighthouseViewer } from '@blen/react-lighthouse-viewer';
 
-// Start loading outside render. Any URL that serves a
-// Lighthouse JSON report works (with CORS).
-const report = fetchLighthouseReport('/reports/site.json');
-
+// PageSpeed Insights runs Lighthouse on the site. See docs/pagespeed-api-key.md.
 export function App() {
   return (
-    <ErrorBoundary fallback={<p>Could not load the report.</p>}>
-      <Suspense fallback={<p>Loading…</p>}>
-        <LighthouseViewer report={report} />
-      </Suspense>
-    </ErrorBoundary>
+    <LighthouseViewer
+      url="https://www.blencorp.com"
+      apiKey={import.meta.env.VITE_PAGESPEED_API_KEY}
+    />
   );
+}`;
+
+const fromFile = `import { LighthouseViewer } from '@blen/react-lighthouse-viewer';
+
+// A report saved with: lighthouse <url> --output=json
+export function App() {
+  return <LighthouseViewer src="/reports/site.json" />;
 }`;
 
 const fromObject = `import { useState } from 'react';
@@ -58,6 +56,7 @@ export function Upload() {
 }`;
 
 export const snippets = [
-  { label: 'From a URL', filename: 'app.tsx', code: fromUrl },
-  { label: 'From an object', filename: 'upload.tsx', code: fromObject },
+  { label: 'Website', filename: 'app.tsx', code: fromWebsite },
+  { label: 'Report file', filename: 'app.tsx', code: fromFile },
+  { label: 'Report object', filename: 'upload.tsx', code: fromObject },
 ];

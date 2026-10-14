@@ -36,7 +36,7 @@ writeFileSync(
 writeFileSync(
   join(dir, 'check.js'),
   `const m = await import('@blen/react-lighthouse-viewer');
-if (typeof m.LighthouseViewer !== 'function' || typeof m.fetchLighthouseReport !== 'function') {
+if (typeof m.LighthouseViewer !== 'function' || typeof m.isLighthouseReport !== 'function') {
   throw new Error('Missing exports: ' + Object.keys(m).join(', '));
 }
 console.log('${manager}: imports @blen/react-lighthouse-viewer, bundles Lighthouse ' + m.lighthouseVersion);

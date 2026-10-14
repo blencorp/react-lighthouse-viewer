@@ -1,22 +1,14 @@
-import { Suspense, use, useDeferredValue, useState } from 'react';
+import { use, useDeferredValue, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import {
-  fetchLighthouseReport,
   LighthouseViewer,
   lighthouseVersion,
   type RendererOptions,
 } from '@blen/react-lighthouse-viewer';
 import { CodeTabs } from './code-block.tsx';
-import { ErrorBoundary } from './error-boundary.tsx';
 import { Install } from './install.tsx';
 import { LighthouseLogo } from './lighthouse-logo.tsx';
-import {
-  hostOf,
-  loadFile,
-  loadIndex,
-  noSamplesView,
-  type ReportView,
-  sampleView,
-} from './reports.ts';
+import { addressView, fileView, hostOf, loadIndex, sampleView, type View } from './reports.ts';
 import { SampleGrid } from './sample-grid.tsx';
 import { snippets } from './snippets.ts';
 import { Switch } from './switch.tsx';
@@ -27,22 +19,23 @@ const indexPromise = loadIndex();
 export function App() {
   const samples = use(indexPromise);
   const hash = useHash();
-  // A report the user opened from a URL or a file. It shows while the URL has no hash.
-  const [custom, setCustom] = useState<ReportView | null>(null);
+  // A website or file the user opened. It shows while the URL has no hash.
+  const [custom, setCustom] = useState<View | null>(null);
   const [darkMode, setDarkMode] = useState(true);
   const [topbar, setTopbar] = useState(true);
   const [dragging, setDragging] = useState(false);
 
+  const titleOf = (slug: string) => {
+    const sample = samples.find((item) => item.slug === slug);
+    return sample ? hostOf(sample.url) : slug;
+  };
   const first = samples[0];
   const view = hash
-    ? sampleView(hash)
-    : (custom ?? (first ? sampleView(first.slug) : noSamplesView()));
+    ? sampleView(hash, titleOf(hash))
+    : (custom ?? (first ? sampleView(first.slug, titleOf(first.slug)) : null));
   // While the next report loads, React keeps showing the current one.
   const shown = useDeferredValue(view);
   const loading = shown !== view;
-
-  const sample = samples.find((item) => item.slug === shown.key);
-  const title = sample ? hostOf(sample.url) : shown.name;
   const activeSlug = hash || (custom ? undefined : first?.slug);
 
   const selectSample = (slug: string) => {
@@ -50,25 +43,20 @@ export function App() {
     location.hash = slug;
   };
 
-  const showCustom = (next: ReportView) => {
+  const showCustom = (next: View) => {
     // Clear the hash without a history entry, so the custom report is what the page shows.
     history.replaceState(null, '', location.pathname + location.search);
     setCustom(next);
   };
 
-  const openUrl = (formData: FormData) => {
-    const value = formData.get('url');
-    const url = typeof value === 'string' ? value.trim() : '';
-    if (url) showCustom({ key: `url:${url}`, name: url, report: fetchLighthouseReport(url) });
+  const analyze = (formData: FormData) => {
+    const value = formData.get('address');
+    const address = typeof value === 'string' ? value.trim() : '';
+    if (address) showCustom(addressView(address));
   };
 
   const openFile = (file: File | undefined) => {
-    if (file)
-      showCustom({
-        key: `file:${file.name}:${file.lastModified}`,
-        name: file.name,
-        report: loadFile(file),
-      });
+    if (file) showCustom(fileView(file));
   };
 
   const options: RendererOptions = { disableDarkMode: !darkMode, omitTopbar: !topbar };
@@ -111,8 +99,9 @@ export function App() {
           </p>
           <h1>Lighthouse reports, inside your React app.</h1>
           <p className="lede">
-            Render any Lighthouse JSON report with the official Lighthouse renderer. Typed, server
-            rendering friendly, and no runtime dependencies.
+            Pass a website URL or a saved report and get the full Lighthouse report, drawn by the
+            official Lighthouse renderer. Typed, server rendering friendly, and no runtime
+            dependencies.
           </p>
           <Install />
         </div>
@@ -132,8 +121,8 @@ export function App() {
           <div className="toolbar-row">
             <div className="toolbar-title">
               {loading ? <span className="spinner" aria-label="Loading" /> : null}
-              <span className="toolbar-name" title={title}>
-                {title}
+              <span className="toolbar-name" title={shown?.title}>
+                {shown?.title ?? 'Report'}
               </span>
             </div>
             <div className="toolbar-actions">
@@ -142,17 +131,14 @@ export function App() {
             </div>
           </div>
           <div className="toolbar-row">
-            <form className="url-form" action={openUrl}>
+            <form className="url-form" action={analyze}>
               <input
-                type="url"
-                name="url"
+                name="address"
                 required
-                placeholder="Paste a report URL, for example https://example.com/report.json"
-                aria-label="Report URL"
+                placeholder="Analyze a website (www.example.gov) or paste a report .json URL"
+                aria-label="Website or report URL"
               />
-              <button type="submit" className="button button-primary">
-                Load
-              </button>
+              <AnalyzeButton />
             </form>
             <label className="button">
               Open a file
@@ -166,12 +152,13 @@ export function App() {
           </div>
         </div>
         <div className="report-frame">
-          <Suspense fallback={<p className="message">Loading report…</p>}>
-            {/* A new report gets a new boundary, so an earlier error does not stick. */}
-            <ErrorBoundary key={shown.key} FallbackComponent={ReportError}>
-              <LighthouseViewer report={shown.report} options={options} aria-label={title} />
-            </ErrorBoundary>
-          </Suspense>
+          {shown ? (
+            <LighthouseViewer {...shown.source} options={options} aria-label={shown.title} />
+          ) : (
+            <p className="lh-viewer-error">
+              There are no sample reports yet. Analyze a website or open your own report.
+            </p>
+          )}
         </div>
       </section>
 
@@ -194,11 +181,14 @@ export function App() {
   );
 }
 
-function ReportError({ error }: { error: Error }) {
+// A form action runs in a transition that stays pending until the new report renders.
+function AnalyzeButton() {
+  const { pending } = useFormStatus();
   return (
-    <p className="message error" role="alert">
-      {error.message}
-    </p>
+    <button type="submit" className="button button-primary" disabled={pending}>
+      {pending ? <span className="spinner" aria-hidden="true" /> : null}
+      {pending ? 'Analyzing…' : 'Analyze'}
+    </button>
   );
 }
 
