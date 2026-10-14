@@ -25,7 +25,6 @@ export default defineConfig({
         test: {
           name: 'ssr',
           include: ['test/**/*.ssr.test.tsx', 'test/**/*.test.ts'],
-          typecheck: { enabled: true, include: ['test/**/*.test.ts'] },
           environment: 'node',
         },
       },

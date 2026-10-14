@@ -1,49 +1,101 @@
-import { renderReport } from 'lighthouse/dist/report/bundle.esm.js';
-import { useCallback, useImperativeHandle, useRef } from 'react';
-import type { LighthouseViewerProps } from './types.ts';
+import { type ReactNode, Suspense } from 'react';
+import { ErrorBoundary } from './error-boundary.tsx';
+import {
+  forgetReport,
+  loadReportFile,
+  normalizeUrl,
+  reportKey,
+  runPageSpeed,
+} from './load-report.ts';
+import { ReportContainer } from './report-container.tsx';
+import type { LighthouseReport, LighthouseViewerProps } from './types.ts';
+import { useIsClient } from './use-is-client.ts';
 
-/** Renders a Lighthouse report with the official Lighthouse report renderer. */
-export function LighthouseViewer({ report, options = {}, ref, ...props }: LighthouseViewerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  useImperativeHandle(ref, () => containerRef.current!, []);
-
+/**
+ * Renders a Lighthouse report with the official Lighthouse report renderer.
+ *
+ * Pass exactly one source:
+ * - `url`: a website to analyze with PageSpeed Insights.
+ * - `src`: the URL of a saved Lighthouse JSON report.
+ * - `report`: a report object, or a promise of one.
+ *
+ * @example <LighthouseViewer url="https://www.blencorp.com" apiKey={pageSpeedApiKey} />
+ * @example <LighthouseViewer src="/reports/site.json" />
+ * @example <LighthouseViewer report={report} />
+ */
+export function LighthouseViewer(props: LighthouseViewerProps) {
   const {
-    getStandaloneReportHTML,
-    onPageAnchorRendered,
-    onPrintOverride,
-    onSaveFileOverride,
-    onViewTrace,
-    ...values
-  } = options;
-  // Compare option values, not the options object, so an inline `options={{ ... }}` does not
-  // render the report again on every render.
-  const valuesKey = JSON.stringify(values);
+    url,
+    apiKey,
+    strategy,
+    src,
+    report,
+    fallback,
+    errorFallback = defaultErrorFallback,
+    options,
+    ref,
+    ...rootProps
+  } = props;
+  const isClient = useIsClient();
 
-  // React calls the cleanup and then this callback again when one of its dependencies changes.
-  const renderInto = useCallback(
-    (container: HTMLDivElement) => {
-      containerRef.current = container;
-      const rendered = renderReport(report, {
-        ...JSON.parse(valuesKey),
-        getStandaloneReportHTML,
-        onPageAnchorRendered,
-        onPrintOverride,
-        onSaveFileOverride,
-        onViewTrace,
-      });
-      container.replaceChildren(rendered);
-      return () => container.replaceChildren();
-    },
-    [
-      report,
-      valuesKey,
-      getStandaloneReportHTML,
-      onPageAnchorRendered,
-      onPrintOverride,
-      onSaveFileOverride,
-      onViewTrace,
-    ],
+  const loading = fallback ?? (
+    <output className="lh-viewer-loading">
+      {url !== undefined
+        ? `Running Lighthouse on ${normalizeUrl(url)}. This can take about 30 seconds.`
+        : 'Loading the Lighthouse report.'}
+    </output>
   );
+  const showError = (error: Error) =>
+    typeof errorFallback === 'function' ? errorFallback(error) : errorFallback;
+  const cacheKey =
+    url !== undefined
+      ? reportKey({ url, strategy, apiKey })
+      : src !== undefined
+        ? reportKey({ src })
+        : undefined;
 
-  return <div {...props} ref={renderInto} />;
+  // `url` and `src` load in the browser only. The server renders the loading state, and so does
+  // the first client render, so hydration matches. The load runs inside the error boundary, so a
+  // render while the error shows starts no request.
+  let load: (() => LighthouseReport | Promise<LighthouseReport>) | undefined;
+  if (report !== undefined) load = () => report;
+  else if (url !== undefined) load = () => runPageSpeed(url, { apiKey, strategy });
+  else if (src !== undefined) load = () => loadReportFile(src);
+
+  let content: ReactNode;
+  if (load === undefined) {
+    // TypeScript prevents this; plain JavaScript callers can still get here.
+    content = showError(new TypeError('LighthouseViewer: pass one of `url`, `src` or `report`.'));
+  } else if (report === undefined && !isClient) {
+    content = loading;
+  } else {
+    content = (
+      <ErrorBoundary
+        resetKey={report ?? cacheKey}
+        // Once the error shows, a later attempt (a remount, or the same source again) loads anew.
+        onError={cacheKey === undefined ? undefined : () => forgetReport(cacheKey)}
+        fallback={showError}
+      >
+        <Suspense fallback={loading}>
+          <ReportContainer load={load} options={options} />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  // The root element takes the div props and ref, and holds the loading state, the error, or the
+  // report, so styles and labels apply in every state.
+  return (
+    <div {...rootProps} ref={ref}>
+      {content}
+    </div>
+  );
+}
+
+function defaultErrorFallback(error: Error): ReactNode {
+  return (
+    <div role="alert" className="lh-viewer-error">
+      Could not show the Lighthouse report. {error.message}
+    </div>
+  );
 }

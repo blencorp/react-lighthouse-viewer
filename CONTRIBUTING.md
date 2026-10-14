@@ -13,15 +13,31 @@ pnpm install
 pnpm --filter @blen/react-lighthouse-viewer exec playwright install chromium
 ```
 
+### PageSpeed Insights key (optional)
+
+The demo's "Analyze" box runs Lighthouse through PageSpeed Insights. Without a key it shares a
+public quota that is often used up. To use your own key locally, create
+`example/.env.local` (Git ignores it):
+
+```sh
+VITE_PAGESPEED_API_KEY=your-key
+```
+
+[docs/pagespeed-api-key.md](./docs/pagespeed-api-key.md) explains how to create and restrict a
+key. The Pages workflow reads the deployed site's key from the `PAGESPEED_API_KEY` repository
+secret.
+
 ## Repo layout
 
-| Path                                 | What it is                                             |
-| ------------------------------------ | ------------------------------------------------------ |
-| `packages/react-lighthouse-viewer`   | The published package.                                 |
-| `example`                            | The demo site, deployed to GitHub Pages.               |
-| `scripts/sync-lighthouse.ts`         | Updates the bundled Lighthouse version.                |
-| `scripts/generate-sample-reports.ts` | Makes the demo sample reports. They are not committed. |
-| `.github/workflows`                  | CI, release, Lighthouse sync and Pages workflows.      |
+| Path                                 | What it is                                                              |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| `packages/react-lighthouse-viewer`   | The published package.                                                  |
+| `example`                            | The demo site, deployed to GitHub Pages.                                |
+| `docs`                               | Guides, such as the PageSpeed Insights API key.                         |
+| `scripts/sync-lighthouse.ts`         | Updates the bundled Lighthouse version.                                 |
+| `scripts/generate-sample-reports.ts` | Makes the demo sample reports. They are not committed.                  |
+| `scripts/check-install.ts`           | Installs the packed package with npm, pnpm, yarn or bun and imports it. |
+| `.github/workflows`                  | CI, release, Lighthouse sync and Pages workflows.                       |
 
 ## Scripts
 
@@ -42,17 +58,19 @@ Run these from the repo root:
 
 - Run `pnpm check` before you open a pull request.
 - Add or update tests for behavior changes.
-- Add a line under the next version in `CHANGELOG.md` if users will notice the change.
+- Add a line under `## Unreleased` in `CHANGELOG.md` if users will notice the change.
 
 ## Versions and releases
 
 The package version always equals the bundled Lighthouse version. You do not change it by hand.
 
 1. Every day, the **Lighthouse sync** workflow checks npm for a new Lighthouse version. If there
-   is one, it updates Lighthouse, the package version, the sample report and the changelog, runs
-   `pnpm check`, and opens a pull request.
+   is one, it updates Lighthouse, the package version, the test report and the changelog (the
+   `## Unreleased` section becomes the new version), runs `pnpm check`, and opens a pull request.
 2. A maintainer reviews and merges the pull request.
-3. The **Release** workflow sees a version that is not on npm yet. It runs CI, publishes to npm
-   with provenance (npm trusted publishing, no tokens), and creates the GitHub release.
+3. The **Release** workflow sees a version that has no release yet. It runs CI, publishes to npm
+   with provenance (npm trusted publishing, no tokens), and creates the tag and the GitHub release.
+4. The **Pages** workflow deploys the example site with fresh sample reports.
 
-Component fixes merge to `main` at any time and ship with the next Lighthouse release.
+Component changes merge to `main` at any time, with a line under `## Unreleased` in the changelog,
+and ship with the next Lighthouse release.

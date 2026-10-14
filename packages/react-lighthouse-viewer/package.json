@@ -1,11 +1,12 @@
 {
   "name": "@blen/react-lighthouse-viewer",
   "version": "13.5.0",
-  "description": "Render Lighthouse JSON reports in React, using the official Lighthouse report renderer.",
+  "description": "Show Lighthouse reports in React: analyze a website, load a saved report, or pass a report object. Uses the official Lighthouse report renderer.",
   "keywords": [
     "lighthouse",
     "lighthouse-report",
     "lighthouse-viewer",
+    "pagespeed-insights",
     "performance",
     "react",
     "web-vitals"

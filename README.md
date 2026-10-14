@@ -9,66 +9,167 @@ official Lighthouse report renderer.
 
 **[Live demo →](https://blencorp.github.io/react-lighthouse-viewer/)**
 
-![A Lighthouse report rendered by react-lighthouse-viewer](https://raw.githubusercontent.com/blencorp/react-lighthouse-viewer/main/.github/assets/screenshot.png)
+![The blencorp.com Lighthouse report in the example site](https://raw.githubusercontent.com/blencorp/react-lighthouse-viewer/main/.github/assets/screenshot.png)
 
 - The report looks and works like the HTML report Lighthouse writes, because it uses the same renderer.
+- One prop to show a report: a website `url`, the `src` of a saved report, or a `report` object.
+- Loading, errors and caching are built in. Built for React 19: `use`, Suspense, and promises from Server Components.
 - Renders reports from Lighthouse 6 and later.
-- The version matches Lighthouse: `@blen/react-lighthouse-viewer@13.5.0` bundles the Lighthouse 13.5.0 renderer.
-- No runtime dependencies. React 19 is the only peer dependency.
-- TypeScript types for the report and the renderer options.
+- The version matches Lighthouse: each release bundles the Lighthouse renderer with the same version number.
+- No runtime dependencies. React 19 is the only peer dependency. Works with npm, pnpm, yarn and bun.
+- Typed props that allow exactly one source, plus a runtime check for untrusted JSON.
 - Works with server rendering and React Server Components (it is a client component).
 
 ## Install
 
 ```sh
 npm install @blen/react-lighthouse-viewer
+pnpm add @blen/react-lighthouse-viewer
+yarn add @blen/react-lighthouse-viewer
+bun add @blen/react-lighthouse-viewer
 ```
 
 ## Usage
 
+Pass one of three props: a website `url`, the `src` of a saved report, or a `report` you already
+have. The component loads the report, shows a loading state and errors, and renders it.
+
 ```tsx
 import { LighthouseViewer } from '@blen/react-lighthouse-viewer';
 
-export function Report({ report }) {
-  return <LighthouseViewer report={report} />;
-}
+// Analyze a live website with Google PageSpeed Insights.
+<LighthouseViewer url="https://www.example.com" apiKey={PAGESPEED_API_KEY} />
+
+// Show a saved Lighthouse JSON report.
+<LighthouseViewer src="/reports/example.json" />
+
+// Show a report object, or a promise of one.
+<LighthouseViewer report={report} />
 ```
 
-`report` is the JSON that Lighthouse writes, for example with
-`lighthouse https://example.com --output=json --output-path=report.json`.
-
-### Load a report
-
-Fetch the report and read it with React's `use`:
+### Analyze a website: `url`
 
 ```tsx
-import { Suspense, use } from 'react';
-import { LighthouseViewer, type LighthouseReport } from '@blen/react-lighthouse-viewer';
+<LighthouseViewer url="https://www.example.com" apiKey={import.meta.env.VITE_PAGESPEED_API_KEY} />
+```
 
-const reportPromise: Promise<LighthouseReport> = fetch('/report.json').then((res) => res.json());
+Lighthouse needs a real browser to measure a page, so the component asks the
+[PageSpeed Insights API](https://developers.google.com/speed/docs/insights/v5/get-started) to run
+it. A run takes about 10 to 30 seconds. The page must be public. `www.example.com` works too;
+`https://` is added.
 
-function Report() {
-  return <LighthouseViewer report={use(reportPromise)} />;
-}
+`apiKey` is optional, but without it requests share a public quota that is often used up.
 
-export function App() {
+> [!IMPORTANT]
+> An `apiKey` in a browser app is public. Anyone can copy it from your bundle or the network tab.
+> A key restricted to your site and to the PageSpeed Insights API is fine for demos, docs and
+> internal tools: the API is free, so the worst case is that someone uses up your daily quota.
+> For a public production app, call PageSpeed Insights from your server and pass the result with
+> `src` or `report` ([Next.js example](#nextjs-and-react-server-components)).
+
+Read **[PageSpeed Insights API key](https://github.com/blencorp/react-lighthouse-viewer/blob/main/docs/pagespeed-api-key.md)**
+for how to create a free key, restrict it, and keep it off the browser.
+
+`strategy="desktop"` analyzes the desktop version. The default is `"mobile"`, as in Lighthouse.
+
+### Show a saved report: `src`
+
+```tsx
+<LighthouseViewer src="/reports/example.json" />
+```
+
+`src` is the URL of a report that Lighthouse wrote, for example with
+`lighthouse https://www.example.com --output=json --output-path=public/reports/example.json`. A
+URL on another site must allow cross-origin requests (CORS). No key is needed.
+
+### Show a report you have: `report`
+
+`report` takes a report object, for example from a file upload or your own API. Check JSON that
+you do not control with `isLighthouseReport`:
+
+```tsx
+import { useState } from 'react';
+import {
+  isLighthouseReport,
+  LighthouseViewer,
+  type LighthouseReport,
+} from '@blen/react-lighthouse-viewer';
+
+export function Upload() {
+  const [report, setReport] = useState<LighthouseReport>();
+
+  async function open(file: File) {
+    const json: unknown = JSON.parse(await file.text());
+    if (isLighthouseReport(json)) setReport(json);
+  }
+
   return (
-    <Suspense fallback={<p>Loading report…</p>}>
-      <Report />
-    </Suspense>
+    <>
+      <input
+        type="file"
+        accept=".json"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void open(file);
+        }}
+      />
+      {report && <LighthouseViewer report={report} />}
+    </>
   );
 }
 ```
 
-### Options
+`report` also takes a **promise** of a report, which the component reads with React's `use`.
+Create the promise outside render (in an event handler, a router loader, or a Server Component),
+so it stays the same between renders.
+
+### Loading and errors
+
+While a report loads, the component shows a short status message (`<output class="lh-viewer-loading">`).
+If it cannot load or render the report, it shows a short alert with the reason
+(`<div role="alert" class="lh-viewer-error">`). Style those classes, or replace them:
+
+```tsx
+<LighthouseViewer
+  src="/reports/example.json"
+  fallback={<Spinner />}
+  errorFallback={(error) => <p>Could not load the report: {error.message}</p>}
+/>
+```
+
+The component caches each `url` and `src` result for the lifetime of the page, so two viewers
+with the same source share one request. After an error, the next attempt loads again.
+
+To keep the current report on screen while the next one loads, switch sources with
+`useDeferredValue` or inside `startTransition`. The
+[example site](https://github.com/blencorp/react-lighthouse-viewer/tree/main/example/src) does this.
+
+### Props
+
+Pass exactly one of `url`, `src` or `report`. TypeScript reports an error for none or more than
+one.
+
+| Prop            | Type                                            | Default          | Description                                                                     |
+| --------------- | ----------------------------------------------- | ---------------- | ------------------------------------------------------------------------------- |
+| `url`           | `string`                                        |                  | A public website to analyze with PageSpeed Insights.                            |
+| `apiKey`        | `string`                                        |                  | PageSpeed Insights API key. Only with `url`. See the key guide.                 |
+| `strategy`      | `'mobile' \| 'desktop'`                         | `'mobile'`       | The device to emulate. Only with `url`.                                         |
+| `src`           | `string`                                        |                  | The URL of a saved Lighthouse JSON report.                                      |
+| `report`        | `LighthouseReport \| Promise<LighthouseReport>` |                  | A report object, or a promise of one.                                           |
+| `options`       | `RendererOptions`                               | `{}`             | Options for the Lighthouse renderer. See [Renderer options](#renderer-options). |
+| `fallback`      | `ReactNode`                                     | a status message | Shown while the report loads.                                                   |
+| `errorFallback` | `ReactNode \| ((error: Error) => ReactNode)`    | an alert         | Shown when the report cannot load or render.                                    |
+| `ref`           | `Ref<HTMLDivElement>`                           |                  | The root element, which holds the loading state, the error, or the report.      |
+| `...div props`  | `className`, `style`, `id`, `aria-*`, …         |                  | Passed to the root element, so they apply in every state.                       |
+
+### Renderer options
 
 `options` goes to the Lighthouse renderer unchanged:
 
 ```tsx
 <LighthouseViewer
-  report={report}
+  src="/reports/example.json"
   options={{ disableDarkMode: true, omitTopbar: true }}
-  className="report"
 />
 ```
 
@@ -85,10 +186,8 @@ export function App() {
 | `onViewTrace`             | `() => void`                                      | Shows a **View Trace** action and calls this when the user clicks it.          |
 | `onPageAnchorRendered`    | `(link: HTMLAnchorElement) => void`               | Called for each in-report anchor link, so you can change its `href`.           |
 
-All other `div` props (`className`, `style`, `id`, `ref`, …) go to the container element.
-
-The report renders again when `report`, an option value, or a callback changes. Option values are
-compared by value, so an inline `options={{ ... }}` object is fine. Callbacks are compared by
+The report renders again when its source, an option value, or a callback changes. Option values
+are compared by value, so an inline `options={{ ... }}` object is fine. Callbacks are compared by
 identity: a new function renders the report again, and the user loses scroll position and open
 audits. [React Compiler](https://react.dev/learn/react-compiler) keeps inline callbacks stable for
 you. Without it, wrap callbacks in `useCallback`.
@@ -96,15 +195,19 @@ you. Without it, wrap callbacks in `useCallback`.
 ### Next.js and React Server Components
 
 The package marks itself as a client component (`'use client'`), so you can use it in a Server
-Component. The server sends an empty container, and the report renders in the browser.
+Component. On the server, it renders the loading state for `url` and `src` (and an empty container
+for a `report` object). The report renders in the browser.
+
+A Server Component can also load the report itself and pass the promise down without `await`.
+React streams the result to the browser, and the server keeps any API key:
 
 ```tsx
 // app/report/page.tsx
-import { LighthouseViewer, type LighthouseReport } from '@blen/react-lighthouse-viewer';
-import report from './report.json';
+import { LighthouseViewer } from '@blen/react-lighthouse-viewer';
+import { getReport } from './get-report'; // your data access, for example a database or storage read
 
 export default function Page() {
-  return <LighthouseViewer report={report as LighthouseReport} />;
+  return <LighthouseViewer report={getReport()} />;
 }
 ```
 
@@ -137,9 +240,20 @@ The report brings its own styles. They apply only inside the report element (`.l
 
 ### TypeScript
 
-The package exports `LighthouseReport` (the Lighthouse result type), `RendererOptions`, and
-`LighthouseViewerProps`. TypeScript widens string literals in imported JSON, so cast imported
-reports: `report as LighthouseReport`.
+The package exports these types:
+
+- `LighthouseViewerProps`: the component's props, a union of `UrlSource`, `SrcSource` and
+  `ReportSource`, combined with `ViewerProps`.
+- `LighthouseReport`: the Lighthouse result type.
+- `RendererOptions`: the renderer options.
+- `PageSpeedStrategy`: `'mobile' | 'desktop'`.
+
+Every prop has documentation that shows in your editor.
+
+`isLighthouseReport(value)` is a type guard. Use it for JSON that users upload or that you fetch.
+It checks the top-level shape the renderer needs (`lighthouseVersion`, `categories`, `audits`,
+`configSettings`), not every audit. For a report file in your own repo, a cast
+(`report as LighthouseReport`) is fine, because TypeScript widens string literals in imported JSON.
 
 `lighthouseVersion` is the Lighthouse version that the package bundles.
 
@@ -147,15 +261,17 @@ reports: `report as LighthouseReport`.
 
 - **CLI:** `npx lighthouse https://example.com --output=json --output-path=report.json`
 - **Node:** the [`lighthouse` Node API](https://github.com/GoogleChrome/lighthouse/blob/main/docs/readme.md#using-programmatically) returns the report as `runnerResult.lhr`.
-- **PageSpeed Insights API:** the `lighthouseResult` field of the
-  [response](https://developers.google.com/speed/docs/insights/v5/get-started) is a report.
+- **PageSpeed Insights:** `<LighthouseViewer url="…" />` runs it for you. In your own backend,
+  the `lighthouseResult` field of the
+  [API response](https://developers.google.com/speed/docs/insights/v5/get-started) is a report.
 
 ## Versioning
 
 The package version is the version of the Lighthouse renderer that it bundles. For example,
 `13.5.0` bundles Lighthouse `13.5.0`. A workflow checks for new Lighthouse releases every day and
-publishes the matching version. Changes to the component itself ship with the next Lighthouse
-release, and the [changelog](https://github.com/blencorp/react-lighthouse-viewer/blob/main/CHANGELOG.md) lists them.
+opens a pull request for the matching version. When a maintainer merges it, GitHub Actions
+publishes the release to npm with provenance. Changes to the component itself ship with the next
+Lighthouse release, and the [changelog](https://github.com/blencorp/react-lighthouse-viewer/blob/main/CHANGELOG.md) lists them.
 
 ## Migrate from 6.x
 
@@ -182,6 +298,8 @@ npm install @blen/react-lighthouse-viewer
 ## Limitations
 
 - The package renders single reports. It does not render user flow reports (`FlowResult`).
+- Each `url` and `src` result stays cached until the page reloads. To run Lighthouse on the same
+  website again, reload the page.
 - With the top bar on, the Lighthouse renderer adds `copy` and `afterprint` listeners to the page
   that it does not remove. If your app mounts and unmounts many reports, set `omitTopbar`.
 

@@ -4,6 +4,20 @@ Each version bundles the Lighthouse report renderer with the same version number
 lists the changes to the component itself. For renderer changes, see the
 [Lighthouse releases](https://github.com/GoogleChrome/lighthouse/releases).
 
+## Unreleased
+
+- New `url` prop: analyze a live website. PageSpeed Insights runs Lighthouse, and the component
+  renders the result. Optional `apiKey` and `strategy` (`'mobile'` or `'desktop'`). See
+  [the API key guide](https://github.com/blencorp/react-lighthouse-viewer/blob/main/docs/pagespeed-api-key.md).
+- New `src` prop: show a saved Lighthouse JSON report from a URL.
+- `report` also takes a promise of a report, read with `use()`, so a Server Component can pass one
+  down.
+- Built-in loading and error states, with `fallback` and `errorFallback` props to replace them.
+  Each `url` and `src` result is cached, so two viewers with the same source share one request.
+- The props allow exactly one of `url`, `src` or `report`, and every prop has documentation.
+- Add `isLighthouseReport`, a type guard for JSON that users upload or that you fetch.
+- Show a clear error when `report` is not a Lighthouse report.
+
 ## 13.5.0
 
 A full rewrite on top of the official Lighthouse report renderer.

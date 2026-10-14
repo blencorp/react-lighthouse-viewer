@@ -1,56 +1,77 @@
-import { Suspense, use, useState, useTransition } from 'react';
+import { use, useDeferredValue, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import {
   LighthouseViewer,
   lighthouseVersion,
   type RendererOptions,
 } from '@blen/react-lighthouse-viewer';
-import { type LoadResult, loadFile, loadIndex, loadSample, type SampleSummary } from './reports.ts';
+import { CodeTabs } from './code-block.tsx';
+import { Install } from './install.tsx';
+import { LighthouseLogo } from './lighthouse-logo.tsx';
+import { addressView, fileView, hostOf, loadIndex, sampleView, type View } from './reports.ts';
+import { SampleGrid } from './sample-grid.tsx';
+import { snippets } from './snippets.ts';
+import { Switch } from './switch.tsx';
+import { useHash } from './use-hash.ts';
 
 const indexPromise = loadIndex();
-const initialSlug = location.hash.slice(1);
 
 export function App() {
-  // An empty slug means "the first sample", which is known only after the index loads.
-  const [selected, setSelected] = useState(initialSlug);
-  const [result, setResult] = useState(() =>
-    initialSlug ? loadSample(initialSlug) : loadFirstSample(),
-  );
-  const [followSystemTheme, setFollowSystemTheme] = useState(true);
-  const [showTopbar, setShowTopbar] = useState(true);
+  const samples = use(indexPromise);
+  const hash = useHash();
+  // A website or file the user opened. It shows while the URL has no hash.
+  const [custom, setCustom] = useState<View | null>(null);
+  const [darkMode, setDarkMode] = useState(true);
+  const [topbar, setTopbar] = useState(true);
   const [dragging, setDragging] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  // Controlled, so the address stays in the field after the form action runs (React resets
+  // uncontrolled fields), and the user can retry.
+  const [address, setAddress] = useState('');
 
-  // A transition keeps the current report on screen while the next one loads.
-  const show = (slug: string, next: Promise<LoadResult>) =>
-    startTransition(() => {
-      setSelected(slug);
-      setResult(next);
-      history.replaceState(
-        null,
-        '',
-        slug && slug !== 'file' ? `#${slug}` : location.pathname + location.search,
-      );
-    });
+  const titleOf = (slug: string) => {
+    const sample = samples.find((item) => item.slug === slug);
+    return sample ? hostOf(sample.url) : slug;
+  };
+  const first = samples[0];
+  const view = hash
+    ? sampleView(hash, titleOf(hash))
+    : (custom ?? (first ? sampleView(first.slug, titleOf(first.slug)) : null));
+  // While the next report loads, React keeps showing the current one.
+  const shown = useDeferredValue(view);
+  const loading = shown !== view;
+  const activeSlug = hash || (custom ? undefined : first?.slug);
+
+  const selectSample = (slug: string) => {
+    setCustom(null);
+    location.hash = slug;
+  };
+
+  const showCustom = (next: View) => {
+    // Clear the hash without a history entry, so the custom report is what the page shows.
+    history.replaceState(null, '', location.pathname + location.search);
+    setCustom(next);
+  };
+
+  const analyze = () => {
+    const trimmed = address.trim();
+    if (trimmed) showCustom(addressView(trimmed));
+  };
 
   const openFile = (file: File | undefined) => {
-    if (file) show('file', loadFile(file));
+    if (file) showCustom(fileView(file));
   };
 
-  const options: RendererOptions = {
-    disableDarkMode: !followSystemTheme,
-    omitTopbar: !showTopbar,
-  };
+  const options: RendererOptions = { disableDarkMode: !darkMode, omitTopbar: !topbar };
 
   return (
     <div
-      className="app"
-      data-dragging={dragging || undefined}
+      className="page"
       onDragOver={(event) => {
         event.preventDefault();
         setDragging(true);
       }}
       onDragLeave={(event) => {
-        if (event.currentTarget === event.target) setDragging(false);
+        if (!event.relatedTarget) setDragging(false);
       }}
       onDrop={(event) => {
         event.preventDefault();
@@ -58,159 +79,137 @@ export function App() {
         openFile(event.dataTransfer.files[0]);
       }}
     >
-      <header className="header">
-        <div className="title">
-          <h1>@blen/react-lighthouse-viewer</h1>
-          <span className="muted">Lighthouse {lighthouseVersion}</span>
-        </div>
-        <nav className="links">
-          <a href="https://github.com/blencorp/react-lighthouse-viewer">GitHub</a>
+      <header className="nav container">
+        <span className="brand">
+          <LighthouseMark />
+          react-lighthouse-viewer
+        </span>
+        <nav className="nav-links">
+          <a href="https://github.com/blencorp/react-lighthouse-viewer#readme">Docs</a>
           <a href="https://www.npmjs.com/package/@blen/react-lighthouse-viewer">npm</a>
+          <a className="button" href="https://github.com/blencorp/react-lighthouse-viewer">
+            GitHub
+          </a>
         </nav>
       </header>
 
-      <section className="samples" aria-labelledby="samples-title">
-        <div className="samples-heading">
-          <h2 id="samples-title">Sample reports</h2>
-          {isPending && <span className="muted">Loading…</span>}
+      <section className="hero container">
+        <div className="hero-text">
+          <p className="eyebrow">
+            <LighthouseLogo />
+            Powered by the official Lighthouse {lighthouseVersion} renderer
+          </p>
+          <h1>Lighthouse reports, inside your React app.</h1>
+          <p className="lede">
+            Pass a website URL or a saved report and get the full Lighthouse report, drawn by the
+            official Lighthouse renderer. Typed, server rendering friendly, and no runtime
+            dependencies.
+          </p>
+          <Install />
         </div>
-        <Suspense fallback={<p className="muted">Loading samples…</p>}>
-          <SampleGrid selected={selected} onSelect={(slug) => show(slug, loadSample(slug))} />
-        </Suspense>
+        <CodeTabs snippets={snippets} />
       </section>
 
-      <div className="controls">
-        <label className="button">
-          Open your own JSON report…
-          <input
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(event) => openFile(event.target.files?.[0])}
-          />
-        </label>
-        <span className="muted">or drop it anywhere on the page. It stays in your browser.</span>
-        <label>
-          <input
-            type="checkbox"
-            checked={followSystemTheme}
-            onChange={(event) => setFollowSystemTheme(event.target.checked)}
-          />
-          Follow system dark mode
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={showTopbar}
-            onChange={(event) => setShowTopbar(event.target.checked)}
-          />
-          Show top bar
-        </label>
-      </div>
+      <section className="container section" aria-labelledby="samples-title">
+        <div className="section-heading">
+          <h2 id="samples-title">Sample reports</h2>
+          <p>Fresh Lighthouse runs. Pick a site to open its full report.</p>
+        </div>
+        <SampleGrid samples={samples} active={activeSlug} onSelect={selectSample} />
+      </section>
 
-      <main>
-        <Suspense fallback={<p className="message">Loading report…</p>}>
-          <Report result={result} options={options} />
-        </Suspense>
-      </main>
+      <section className="container section viewer" aria-label="Report">
+        <div className="toolbar">
+          <div className="toolbar-row">
+            <div className="toolbar-title">
+              {loading ? <span className="spinner" aria-label="Loading" /> : null}
+              <span className="toolbar-name" title={shown?.title}>
+                {shown?.title ?? 'Report'}
+              </span>
+            </div>
+            <div className="toolbar-actions">
+              <Switch checked={darkMode} onChange={setDarkMode} label="Auto dark mode" />
+              <Switch checked={topbar} onChange={setTopbar} label="Top bar" />
+            </div>
+          </div>
+          <div className="toolbar-row">
+            <form className="url-form" action={analyze}>
+              <input
+                name="address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                required
+                placeholder="Analyze a website (www.example.gov) or paste a report .json URL"
+                aria-label="Website or report URL"
+              />
+              <AnalyzeButton />
+            </form>
+            <label className="button">
+              Open a file
+              <input
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(event) => openFile(event.target.files?.[0])}
+              />
+            </label>
+          </div>
+        </div>
+        <div className="report-frame">
+          {shown ? (
+            <LighthouseViewer {...shown.source} options={options} aria-label={shown.title} />
+          ) : (
+            <p className="lh-viewer-error">
+              There are no sample reports yet. Analyze a website or open your own report.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <footer className="footer container">
+        <span>
+          Made by <a href="https://blencorp.com">BLEN</a>. Apache-2.0.
+        </span>
+        <span>
+          Lighthouse is a Google project. This site is not affiliated with Google. Reports stay in
+          your browser.
+        </span>
+      </footer>
+
+      {dragging && (
+        <div className="drop-overlay" aria-hidden="true">
+          <div className="drop-box">Drop a Lighthouse JSON report</div>
+        </div>
+      )}
     </div>
   );
 }
 
-async function loadFirstSample(): Promise<LoadResult> {
-  const [first] = await indexPromise;
-  return first
-    ? loadSample(first.slug)
-    : { error: 'There are no sample reports yet. Open your own report to view it.' };
-}
-
-function SampleGrid({
-  selected,
-  onSelect,
-}: {
-  selected: string;
-  onSelect: (slug: string) => void;
-}) {
-  const samples = use(indexPromise);
-  const active = selected || samples[0]?.slug;
-
+// A form action runs in a transition that stays pending until the new report renders.
+function AnalyzeButton() {
+  const { pending } = useFormStatus();
   return (
-    <ul className="grid">
-      {samples.map((sample) => (
-        <li key={sample.slug}>
-          <SampleCard
-            sample={sample}
-            active={active === sample.slug}
-            onSelect={() => onSelect(sample.slug)}
-          />
-        </li>
-      ))}
-      {samples.length === 0 && (
-        <li className="muted">
-          Run <code>pnpm reports</code> to generate the website samples.
-        </li>
-      )}
-    </ul>
-  );
-}
-
-function SampleCard({
-  sample,
-  active,
-  onSelect,
-}: {
-  sample: SampleSummary;
-  active: boolean;
-  onSelect: () => void;
-}) {
-  const host = new URL(sample.url).hostname.replace(/^www\./, '');
-  const scores = sample.scores.filter((s) => coreCategories.has(s.id) && s.score !== null);
-  const date = new Date(sample.fetchTime).toLocaleDateString(undefined, { dateStyle: 'medium' });
-
-  return (
-    <button type="button" className="card" aria-pressed={active} onClick={onSelect}>
-      <span className="card-title">{host}</span>
-      <span className="scores">
-        {scores.map((s) => {
-          const score = Math.round((s.score ?? 0) * 100);
-          return (
-            <span key={s.id} className="score" data-rating={rating(score)} title={s.title}>
-              <span className="score-value">{score}</span>
-              <span className="score-label">{shortTitles[s.id]}</span>
-            </span>
-          );
-        })}
-      </span>
-      <span className="card-meta">
-        Lighthouse {sample.lighthouseVersion} · {date}
-      </span>
+    <button type="submit" className="button button-primary" disabled={pending}>
+      {pending ? <span className="spinner" aria-hidden="true" /> : null}
+      {pending ? 'Analyzing…' : 'Analyze'}
     </button>
   );
 }
 
-const coreCategories = new Set(['performance', 'accessibility', 'best-practices', 'seo']);
-const shortTitles: Record<string, string> = {
-  performance: 'Perf',
-  accessibility: 'A11y',
-  'best-practices': 'BP',
-  seo: 'SEO',
-};
-
-// The same score ranges as the Lighthouse report.
-function rating(score: number) {
-  if (score >= 90) return 'pass';
-  if (score >= 50) return 'average';
-  return 'fail';
-}
-
-function Report({ result, options }: { result: Promise<LoadResult>; options: RendererOptions }) {
-  const loaded = use(result);
-  if ('error' in loaded) {
-    return (
-      <p className="message error" role="alert">
-        {loaded.error}
-      </p>
-    );
-  }
-  return <LighthouseViewer report={loaded.report} options={options} aria-label={loaded.name} />;
+// Our own mark, kept different from the official Lighthouse logo, which is a Google trademark.
+function LighthouseMark() {
+  return (
+    <svg className="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M8.6 6.4 3.5 4.6v4.2l5.1-1.6ZM15.4 6.4l5.1-1.8v4.2l-5.1-1.6Z"
+        fill="#fff"
+        opacity=".55"
+      />
+      <path d="M9.2 5 12 2.6 14.8 5Z" fill="#fff" />
+      <rect x="9.6" y="5.6" width="4.8" height="3" rx=".6" fill="#fff" />
+      <path d="M9.9 9.4h4.2l1.3 10.4H8.6Z" fill="#fff" />
+      <path d="M9.45 12.9h5.1l.3 2.3H9.15Z" fill="var(--accent)" />
+      <rect x="6.5" y="19.8" width="11" height="1.8" rx=".9" fill="#fff" />
+    </svg>
+  );
 }
