@@ -6,6 +6,8 @@ renderer changes, see the [Lighthouse releases](https://github.com/GoogleChrome/
 
 ## Unreleased
 
+## 13.5.3
+
 - Error messages for `src` leave out the query string, which can hold a signed token.
 
 ## 13.5.2
