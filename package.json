@@ -9,7 +9,8 @@
     "format": "oxfmt && oxlint --fix",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @blen/react-lighthouse-viewer test",
-    "check": "pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm --filter @blen/react-lighthouse-viewer check:package && pnpm --filter example build"
+    "check": "pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm --filter @blen/react-lighthouse-viewer check:package && pnpm --filter example build",
+    "reports": "node scripts/generate-sample-reports.ts"
   },
   "devDependencies": {
     "oxfmt": "0.72.0",
