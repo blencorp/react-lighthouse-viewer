@@ -58,9 +58,17 @@ Lighthouse needs a real browser to measure a page, so the component asks the
 it. A run takes about 10 to 30 seconds. The page must be public. `www.example.com` works too;
 `https://` is added.
 
-`apiKey` is optional, but without it requests share a public quota that is often used up. Read
-**[PageSpeed Insights API key](https://github.com/blencorp/react-lighthouse-viewer/blob/main/docs/pagespeed-api-key.md)**
-for why, how to create a free key, how to restrict it safely, and how to keep it off the browser.
+`apiKey` is optional, but without it requests share a public quota that is often used up.
+
+> [!IMPORTANT]
+> An `apiKey` in a browser app is public. Anyone can copy it from your bundle or the network tab.
+> A key restricted to your site and to the PageSpeed Insights API is fine for demos, docs and
+> internal tools: the API is free, so the worst case is that someone uses up your daily quota.
+> For a public production app, call PageSpeed Insights from your server and pass the result with
+> `src` or `report` ([Next.js example](#nextjs-and-react-server-components)).
+
+Read **[PageSpeed Insights API key](https://github.com/blencorp/react-lighthouse-viewer/blob/main/docs/pagespeed-api-key.md)**
+for how to create a free key, restrict it, and keep it off the browser.
 
 `strategy="desktop"` analyzes the desktop version. The default is `"mobile"`, as in Lighthouse.
 

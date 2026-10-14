@@ -43,8 +43,19 @@ you need a Google Cloud project, and Google shows the project's limits on the
 ## Restrict the key
 
 The component calls Google from the browser, so anyone who opens your site can see the key in
-the network requests. That is normal for browser keys. Restrictions make a visible key useless to
-anyone else.
+the network requests and in your JavaScript bundle. You cannot hide a key in a single-page app.
+
+**Is that safe?** It is safe enough for a demo, a docs site or an internal tool, if you restrict
+the key as shown below. It is not a secret:
+
+- The PageSpeed Insights API is free, so a leaked key cannot run up a bill. The risk is quota:
+  someone who copies the key can use up its daily requests, and then your `url` viewers fail until
+  the quota resets.
+- The **Websites** restriction stops other sites from using the key in a browser. It does not stop
+  a script on a server, which can send any `Referer` header it wants.
+
+For a public production app, keep the key on your server
+([Keep the key off the browser](#keep-the-key-off-the-browser)).
 
 On the key's page in **APIs & Services → Credentials**:
 
@@ -54,8 +65,8 @@ On the key's page in **APIs & Services → Credentials**:
    - `https://www.example.com/*`
    - `http://localhost:5173/*` for local development
 
-   The browser sends the page's origin with each request, and Google rejects requests from any
-   other site.
+   The browser sends the page's address with each request, and Google rejects browser requests
+   from any other site.
 
 3. Save. Changes can take a few minutes to apply.
 
@@ -65,7 +76,7 @@ should not be, such as a public repository without restrictions.
 ## Pass the key to the component
 
 Keep the key in an environment variable, not in your source code. Build tools put public
-variables into the browser bundle, which is fine for a restricted key.
+variables into the browser bundle. That is acceptable only for a restricted key (see above).
 
 **Vite** (`.env.local`, which Vite does not commit by default):
 
@@ -101,9 +112,10 @@ the variable in the build step:
 
 ## Keep the key off the browser
 
-If you do not want the key in the browser at all, run Lighthouse on your server instead: call the
-PageSpeed Insights API (or the `lighthouse` Node package) from your backend, store or return the
-report JSON, and show it with `src` or `report`:
+This is the recommended setup for a public production app. Run Lighthouse on your server: call
+the PageSpeed Insights API (or the `lighthouse` Node package) from your backend, store or return
+the report JSON, and show it with `src` or `report`. The key stays in a server environment
+variable, and your server can limit, cache and authenticate the requests:
 
 ```tsx
 <LighthouseViewer src={`/api/lighthouse?url=${encodeURIComponent(site)}`} />
