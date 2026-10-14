@@ -8,7 +8,7 @@ import {
   runPageSpeed,
 } from './load-report.ts';
 import { ReportContainer } from './report-container.tsx';
-import type { LighthouseViewerProps } from './types.ts';
+import type { LighthouseReport, LighthouseViewerProps } from './types.ts';
 import { useIsClient } from './use-is-client.ts';
 
 /**
@@ -32,7 +32,9 @@ export function LighthouseViewer(props: LighthouseViewerProps) {
     report,
     fallback,
     errorFallback = defaultErrorFallback,
-    ...viewerProps
+    options,
+    ref,
+    ...rootProps
   } = props;
   const isClient = useIsClient();
 
@@ -43,41 +45,50 @@ export function LighthouseViewer(props: LighthouseViewerProps) {
         : 'Loading the Lighthouse report.'}
     </output>
   );
+  const showError = (error: Error) =>
+    typeof errorFallback === 'function' ? errorFallback(error) : errorFallback;
   const cacheKey =
     url !== undefined
-      ? reportKey({ url, strategy })
+      ? reportKey({ url, strategy, apiKey })
       : src !== undefined
         ? reportKey({ src })
         : undefined;
-  const resetKey = report ?? cacheKey;
 
   // `url` and `src` load in the browser only. The server renders the loading state, and so does
-  // the first client render, so hydration matches.
-  let source = report;
-  if (source === undefined) {
-    if (!isClient) return loading;
-    if (url !== undefined) source = runPageSpeed(url, { apiKey, strategy });
-    else if (src !== undefined) source = loadReportFile(src);
-    else {
-      // TypeScript prevents this; plain JavaScript callers can still get here.
-      const error = new TypeError('LighthouseViewer: pass one of `url`, `src` or `report`.');
-      return typeof errorFallback === 'function' ? errorFallback(error) : errorFallback;
-    }
+  // the first client render, so hydration matches. The load runs inside the error boundary, so a
+  // render while the error shows starts no request.
+  let load: (() => LighthouseReport | Promise<LighthouseReport>) | undefined;
+  if (report !== undefined) load = () => report;
+  else if (url !== undefined) load = () => runPageSpeed(url, { apiKey, strategy });
+  else if (src !== undefined) load = () => loadReportFile(src);
+
+  let content: ReactNode;
+  if (load === undefined) {
+    // TypeScript prevents this; plain JavaScript callers can still get here.
+    content = showError(new TypeError('LighthouseViewer: pass one of `url`, `src` or `report`.'));
+  } else if (report === undefined && !isClient) {
+    content = loading;
+  } else {
+    content = (
+      <ErrorBoundary
+        resetKey={report ?? cacheKey}
+        // Once the error shows, a later attempt (a remount, or the same source again) loads anew.
+        onError={cacheKey === undefined ? undefined : () => forgetReport(cacheKey)}
+        fallback={showError}
+      >
+        <Suspense fallback={loading}>
+          <ReportContainer load={load} options={options} />
+        </Suspense>
+      </ErrorBoundary>
+    );
   }
 
+  // The root element takes the div props and ref, and holds the loading state, the error, or the
+  // report, so styles and labels apply in every state.
   return (
-    <ErrorBoundary
-      resetKey={resetKey}
-      // Once the error shows, a later attempt (a remount, or the same source again) loads anew.
-      onError={cacheKey === undefined ? undefined : () => forgetReport(cacheKey)}
-      fallback={(error) =>
-        typeof errorFallback === 'function' ? errorFallback(error) : errorFallback
-      }
-    >
-      <Suspense fallback={loading}>
-        <ReportContainer report={source} {...viewerProps} />
-      </Suspense>
-    </ErrorBoundary>
+    <div {...rootProps} ref={ref}>
+      {content}
+    </div>
   );
 }
 

@@ -1,7 +1,9 @@
-import { isLighthouseReport } from './is-lighthouse-report.ts';
+import { isLighthouseReport, isObject } from './is-lighthouse-report.ts';
 import type { LighthouseReport, PageSpeedStrategy } from './types.ts';
 
 const pageSpeedEndpoint = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
+const keyGuide =
+  'https://github.com/blencorp/react-lighthouse-viewer/blob/main/docs/pagespeed-api-key.md';
 const pageSpeedCategories = ['PERFORMANCE', 'ACCESSIBILITY', 'BEST_PRACTICES', 'SEO'];
 
 // React's `use` needs the same promise on every render, so each source keeps one promise. A failed
@@ -21,11 +23,15 @@ function cached(key: string, load: () => Promise<LighthouseReport>) {
 
 /** The cache key of a `src` or `url` source. */
 export function reportKey(
-  source: { src: string } | { url: string; strategy?: PageSpeedStrategy | undefined },
+  source:
+    | { src: string }
+    | { url: string; strategy?: PageSpeedStrategy | undefined; apiKey?: string | undefined },
 ) {
+  // The API key is part of the cache key: a request without one can fail on the shared quota, and
+  // a key passed after that must load again.
   return 'src' in source
     ? `src:${source.src}`
-    : `psi:${source.strategy ?? 'mobile'}:${normalizeUrl(source.url)}`;
+    : `psi:${source.strategy ?? 'mobile'}:${source.apiKey || ''}:${normalizeUrl(source.url)}`;
 }
 
 /** Clears a cached source, so the next render loads it again. */
@@ -61,8 +67,7 @@ export function runPageSpeed(
   { apiKey, strategy = 'mobile' }: { apiKey?: string | undefined; strategy?: PageSpeedStrategy },
 ): Promise<LighthouseReport> {
   const target = normalizeUrl(url);
-  // The API key is not part of the cache key: any key returns the same report.
-  return cached(reportKey({ url, strategy }), async () => {
+  return cached(reportKey({ url, strategy, apiKey }), async () => {
     const request = new URL(pageSpeedEndpoint);
     request.searchParams.set('url', target);
     request.searchParams.set('strategy', strategy.toUpperCase());
@@ -76,7 +81,7 @@ export function runPageSpeed(
       // Google sends some refusals (for example a used-up quota) without CORS headers, and the
       // browser reports those as a network error.
       throw new Error(
-        `Could not reach PageSpeed Insights. Check the network${apiKey ? '' : ', or pass an `apiKey`'} (see docs/pagespeed-api-key.md).`,
+        `Could not reach PageSpeed Insights. Check the network${apiKey ? '' : ', or pass an `apiKey`'} (see ${keyGuide}).`,
       );
     }
     const body: unknown = await response.json().catch(() => null);
@@ -94,11 +99,7 @@ function pageSpeedError(status: number, body: unknown, hasKey: boolean) {
   const error = isObject(body) && isObject(body['error']) ? body['error'] : undefined;
   const message = typeof error?.['message'] === 'string' ? error['message'] : `HTTP ${status}`;
   if (status === 429 && !hasKey) {
-    return 'PageSpeed Insights quota exceeded. Pass an `apiKey` to use your own quota (see docs/pagespeed-api-key.md).';
+    return `PageSpeed Insights quota exceeded. Pass an \`apiKey\` to use your own quota (see ${keyGuide}).`;
   }
   return `PageSpeed Insights could not analyze the page: ${message}`;
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }

@@ -60,7 +60,7 @@ describe('LighthouseViewer', () => {
     expect(viewer.querySelectorAll('article.lh-root')).toHaveLength(1);
 
     await screen.unmount();
-    expect(viewer.childElementCount).toBe(0);
+    expect(viewer.querySelectorAll('article.lh-root')).toHaveLength(0);
   });
 
   test('replaces the report when the report prop changes', async () => {
@@ -82,6 +82,22 @@ describe('LighthouseViewer', () => {
 
     expect(ref.current).toBe(container.querySelector('#report'));
     expect(ref.current?.className).toBe('my-report');
+  });
+
+  test('puts div props on the root element in the loading and error states too', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { promise, resolve } = Promise.withResolvers<Response>();
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(promise);
+    const screen = await render(
+      <LighthouseViewer src="/reports/site-h.json" className="frame" aria-label="Report" />,
+    );
+    const root = screen.container.querySelector('.frame');
+    expect(root?.getAttribute('aria-label')).toBe('Report');
+    expect(root?.querySelector('.lh-viewer-loading')).not.toBeNull();
+
+    resolve(new Response('Not found', { status: 404 }));
+    await expect.element(screen.getByRole('alert')).toBeVisible();
+    expect(screen.container.querySelector('.frame [role=alert]')).not.toBeNull();
   });
 
   test('passes options to the renderer', async () => {
@@ -252,6 +268,38 @@ describe('LighthouseViewer', () => {
     expect(alert.element().textContent).toContain('PageSpeed Insights quota exceeded');
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not request again when the parent renders while the error shows', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () =>
+        Response.json({ error: { code: 429, message: 'Quota exceeded' } }, { status: 429 }),
+      );
+    const screen = await render(<LighthouseViewer url="https://www.site-h.gov" />);
+    await expect.element(screen.getByRole('alert')).toBeVisible();
+
+    await screen.rerender(<LighthouseViewer url="https://www.site-h.gov" className="report" />);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('loads again with a new apiKey after an error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input) =>
+        (input as URL).searchParams.has('key')
+          ? Response.json({ lighthouseResult: reportLatest })
+          : Response.json({ error: { code: 429, message: 'Quota exceeded' } }, { status: 429 }),
+      );
+    const screen = await render(<LighthouseViewer url="https://www.site-i.gov" />);
+    await expect.element(screen.getByRole('alert')).toBeVisible();
+
+    await screen.rerender(<LighthouseViewer url="https://www.site-i.gov" apiKey="test-key" />);
+    await expect.poll(() => screen.container.querySelectorAll('article.lh-root').length).toBe(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   test('keeps the current report and shows an error when a deferred source fails', async () => {

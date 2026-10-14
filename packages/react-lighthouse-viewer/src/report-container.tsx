@@ -1,5 +1,5 @@
 import { renderReport } from 'lighthouse/dist/report/bundle.esm.js';
-import { use, useCallback, useImperativeHandle, useRef } from 'react';
+import { use, useCallback } from 'react';
 import { isLighthouseReport } from './is-lighthouse-report.ts';
 import type { LighthouseReport, RendererOptions, ViewerProps } from './types.ts';
 
@@ -7,20 +7,14 @@ import type { LighthouseReport, RendererOptions, ViewerProps } from './types.ts'
 // stops compiling until the component passes the new option too.
 type AllRendererOptions = { [Name in keyof Required<RendererOptions>]: RendererOptions[Name] };
 
-type ReportContainerProps = Omit<ViewerProps, 'fallback' | 'errorFallback'> & {
-  report: LighthouseReport | Promise<LighthouseReport>;
+type ReportContainerProps = Pick<ViewerProps, 'options'> & {
+  load: () => LighthouseReport | Promise<LighthouseReport>;
 };
 
 /** Renders a resolved report into a `div` with the official Lighthouse report renderer. */
-export function ReportContainer({ report, options = {}, ref, ...props }: ReportContainerProps) {
+export function ReportContainer({ load, options = {} }: ReportContainerProps) {
+  const report = load();
   const resolved = report instanceof Promise ? use(report) : report;
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  useImperativeHandle<HTMLDivElement | null, HTMLDivElement | null>(
-    ref,
-    () => containerRef.current,
-    [],
-  );
 
   // Option values are primitives and callbacks are compared by identity, so an inline
   // `options={{ ... }}` object does not render the report again on every render.
@@ -41,7 +35,6 @@ export function ReportContainer({ report, options = {}, ref, ...props }: ReportC
   // React calls the cleanup and then this callback again when one of its dependencies changes.
   const renderInto = useCallback(
     (container: HTMLDivElement) => {
-      containerRef.current = container;
       const rendererOptions: AllRendererOptions = {
         disableDarkMode,
         disableFireworks,
@@ -81,5 +74,5 @@ export function ReportContainer({ report, options = {}, ref, ...props }: ReportC
     );
   }
 
-  return <div {...props} ref={renderInto} />;
+  return <div ref={renderInto} />;
 }

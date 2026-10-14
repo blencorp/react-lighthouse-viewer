@@ -24,6 +24,9 @@ export function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [topbar, setTopbar] = useState(true);
   const [dragging, setDragging] = useState(false);
+  // Controlled, so the address stays in the field after the form action runs (React resets
+  // uncontrolled fields), and the user can retry.
+  const [address, setAddress] = useState('');
 
   const titleOf = (slug: string) => {
     const sample = samples.find((item) => item.slug === slug);
@@ -49,10 +52,9 @@ export function App() {
     setCustom(next);
   };
 
-  const analyze = (formData: FormData) => {
-    const value = formData.get('address');
-    const address = typeof value === 'string' ? value.trim() : '';
-    if (address) showCustom(addressView(address));
+  const analyze = () => {
+    const trimmed = address.trim();
+    if (trimmed) showCustom(addressView(trimmed));
   };
 
   const openFile = (file: File | undefined) => {
@@ -134,6 +136,8 @@ export function App() {
             <form className="url-form" action={analyze}>
               <input
                 name="address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
                 required
                 placeholder="Analyze a website (www.example.gov) or paste a report .json URL"
                 aria-label="Website or report URL"

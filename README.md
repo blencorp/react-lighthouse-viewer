@@ -151,8 +151,8 @@ one.
 | `options`       | `RendererOptions`                               | `{}`             | Options for the Lighthouse renderer. See [Renderer options](#renderer-options). |
 | `fallback`      | `ReactNode`                                     | a status message | Shown while the report loads.                                                   |
 | `errorFallback` | `ReactNode \| ((error: Error) => ReactNode)`    | an alert         | Shown when the report cannot load or render.                                    |
-| `ref`           | `Ref<HTMLDivElement>`                           |                  | The element that holds the rendered report.                                     |
-| `...div props`  | `className`, `style`, `id`, `aria-*`, …         |                  | Passed to the element that holds the rendered report.                           |
+| `ref`           | `Ref<HTMLDivElement>`                           |                  | The root element, which holds the loading state, the error, or the report.      |
+| `...div props`  | `className`, `style`, `id`, `aria-*`, …         |                  | Passed to the root element, so they apply in every state.                       |
 
 ### Renderer options
 
@@ -290,6 +290,8 @@ npm install @blen/react-lighthouse-viewer
 ## Limitations
 
 - The package renders single reports. It does not render user flow reports (`FlowResult`).
+- Each `url` and `src` result stays cached until the page reloads. To run Lighthouse on the same
+  website again, reload the page.
 - With the top bar on, the Lighthouse renderer adds `copy` and `afterprint` listeners to the page
   that it does not remove. If your app mounts and unmounts many reports, set `omitTopbar`.
 

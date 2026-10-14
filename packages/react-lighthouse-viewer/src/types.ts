@@ -77,9 +77,9 @@ export type ViewerProps = {
    * @default a short alert with the error message
    */
   errorFallback?: ReactNode | ((error: Error) => ReactNode);
-  /** Ref to the element that holds the rendered report. */
+  /** Ref to the root element, which holds the loading state, the error, or the report. */
   ref?: Ref<HTMLDivElement>;
-} & Omit<ComponentPropsWithoutRef<'div'>, 'children'>;
+} & Omit<ComponentPropsWithoutRef<'div'>, 'children'>; // Go to the root element.
 
 /** Pass exactly one of `url`, `src` or `report`. */
 export type LighthouseViewerProps = (UrlSource | SrcSource | ReportSource) & ViewerProps;
