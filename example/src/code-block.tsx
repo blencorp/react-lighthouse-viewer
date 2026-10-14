@@ -8,9 +8,10 @@ type Token = {
 };
 type Snippet = { label: string; filename: string; code: string };
 
-// A small highlighter for the fixed snippets on this page. It is not a general TSX parser.
+// A small highlighter for the fixed snippets on this page. It is not a general TSX parser. A tag
+// must not follow a word, so a type argument such as `useState<LighthouseReport>` stays plain.
 const pattern =
-  /(\/\/[^\n]*)|('[^'\n]*'|`[^`]*`)|\b(import|from|export|function|async|await|const|return|if|throw|new|type|void)\b|(<\/?[A-Z][\w.]*|<\/?[a-z]+(?=[\s>])|<\/?>)|\b([a-zA-Z]\w*)(?=[(<])/g;
+  /(\/\/[^\n]*)|('[^'\n]*'|`[^`]*`)|\b(import|from|export|function|async|await|const|return|if|throw|new|type|void)\b|((?<![\w>])<\/?[A-Z][\w.]*|(?<![\w>])<\/?[a-z]+(?=[\s>])|<\/?>)|\b([a-zA-Z]\w*)(?=[(<])/g;
 const kinds = ['comment', 'string', 'keyword', 'tag', 'fn'] as const;
 
 function highlight(code: string): Token[] {

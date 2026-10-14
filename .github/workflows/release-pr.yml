@@ -20,10 +20,15 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     permissions:
+      actions: write # start CI on the release branch
       contents: write
       pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The job runs new Lighthouse code, so no write token stays in the git config.
+          # create-pull-request pushes with its own token input.
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - id: lighthouse
         env:
@@ -48,7 +53,8 @@ jobs:
         run: |
           pnpm --filter @blen/react-lighthouse-viewer exec playwright install --with-deps chromium
           pnpm check
-      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      - id: pull-request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         if: steps.lighthouse.outputs.prepare
         with:
           branch: release/v${{ steps.release.outputs.version }}
@@ -62,3 +68,9 @@ jobs:
             - When Lighthouse changed: updates it and regenerates the latest sample report.
 
             `pnpm check` passed in the workflow run. Merging this pull request publishes ${{ steps.release.outputs.version }} to npm.
+      - name: Start CI on the release branch
+        if: steps.pull-request.outputs.pull-request-head-sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: release/v${{ steps.release.outputs.version }}
+        run: gh workflow run ci.yml --ref "$BRANCH"

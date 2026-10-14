@@ -6,6 +6,8 @@ renderer changes, see the [Lighthouse releases](https://github.com/GoogleChrome/
 
 ## Unreleased
 
+- Error messages for `src` leave out the query string, which can hold a signed token.
+
 ## 13.5.2
 
 - Server Components can call `isLighthouseReport` and read `lighthouseVersion`. Before, the whole
