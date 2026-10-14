@@ -4,7 +4,7 @@ Each version bundles the Lighthouse report renderer with the same major and mino
 (`13.5.x` bundles Lighthouse 13.5). This file lists the changes to the component itself. For renderer changes, see the
 [Lighthouse releases](https://github.com/GoogleChrome/lighthouse/releases).
 
-## Unreleased
+## 13.5.1
 
 - The patch version now belongs to this package, so component changes can ship before the next
   Lighthouse release. The major and minor versions still match the bundled Lighthouse.
