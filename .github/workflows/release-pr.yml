@@ -20,7 +20,6 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     permissions:
-      actions: write # start CI on the release branch
       contents: write
       pull-requests: write
     steps:
@@ -53,13 +52,15 @@ jobs:
         run: |
           pnpm --filter @blen/react-lighthouse-viewer exec playwright install --with-deps chromium
           pnpm check
-      - id: pull-request
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         if: steps.lighthouse.outputs.prepare
         with:
           branch: release/v${{ steps.release.outputs.version }}
           commit-message: Release ${{ steps.release.outputs.version }}
           title: Release ${{ steps.release.outputs.version }}
+          # A pull request opened with the default token starts no CI runs. A maintainer marks it
+          # ready for review, which runs CI as a required check.
+          draft: always-true
           body: |
             Prepares `@blen/react-lighthouse-viewer@${{ steps.release.outputs.version }}`, which bundles the [Lighthouse ${{ steps.release.outputs.lighthouse }}](https://github.com/GoogleChrome/lighthouse/releases/tag/v${{ steps.release.outputs.lighthouse }}) report renderer.
 
@@ -67,10 +68,4 @@ jobs:
             - Moves the changelog's "Unreleased" changes under ${{ steps.release.outputs.version }}.
             - When Lighthouse changed: updates it and regenerates the latest sample report.
 
-            `pnpm check` passed in the workflow run. Merging this pull request publishes ${{ steps.release.outputs.version }} to npm.
-      - name: Start CI on the release branch
-        if: steps.pull-request.outputs.pull-request-head-sha
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: release/v${{ steps.release.outputs.version }}
-        run: gh workflow run ci.yml --ref "$BRANCH"
+            `pnpm check` passed in the workflow run. Click **Ready for review** to run CI here. Merging this pull request publishes ${{ steps.release.outputs.version }} to npm.
