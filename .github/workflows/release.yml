@@ -1,7 +1,7 @@
 name: Release
 
-# Publishes the package version on main if npm does not have it yet. The version always equals
-# the bundled Lighthouse version, so a merged "Lighthouse X.Y.Z" pull request publishes X.Y.Z.
+# Publishes the package version on main if npm does not have it yet, so a merged "Release X.Y.Z"
+# pull request publishes X.Y.Z.
 on:
   push:
     branches: [main]
@@ -66,8 +66,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          lighthouse=$(node -p "require('./packages/react-lighthouse-viewer/package.json').devDependencies.lighthouse")
           {
-            echo "Bundles the [Lighthouse $VERSION](https://github.com/GoogleChrome/lighthouse/releases/tag/v$VERSION) report renderer."
+            echo "Bundles the [Lighthouse $lighthouse](https://github.com/GoogleChrome/lighthouse/releases/tag/v$lighthouse) report renderer."
             echo
             awk -v heading="## $VERSION" '$0 == heading { found = 1; next } /^## / { found = 0 } found' CHANGELOG.md
           } > release-notes.md

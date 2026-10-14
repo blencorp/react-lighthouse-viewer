@@ -1,11 +1,13 @@
 # Changelog
 
-Each version bundles the Lighthouse report renderer with the same version number. This file
-lists the changes to the component itself. For renderer changes, see the
+Each version bundles the Lighthouse report renderer with the same major and minor version
+(`13.5.x` bundles Lighthouse 13.5). This file lists the changes to the component itself. For renderer changes, see the
 [Lighthouse releases](https://github.com/GoogleChrome/lighthouse/releases).
 
 ## Unreleased
 
+- The patch version now belongs to this package, so component changes can ship before the next
+  Lighthouse release. The major and minor versions still match the bundled Lighthouse.
 - New `url` prop: analyze a live website. PageSpeed Insights runs Lighthouse, and the component
   renders the result. Optional `apiKey` and `strategy` (`'mobile'` or `'desktop'`). See
   [the API key guide](https://github.com/blencorp/react-lighthouse-viewer/blob/main/docs/pagespeed-api-key.md).

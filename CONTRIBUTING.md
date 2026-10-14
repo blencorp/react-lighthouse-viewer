@@ -34,10 +34,10 @@ secret.
 | `packages/react-lighthouse-viewer`   | The published package.                                                  |
 | `example`                            | The demo site, deployed to GitHub Pages.                                |
 | `docs`                               | Guides, such as the PageSpeed Insights API key.                         |
-| `scripts/sync-lighthouse.ts`         | Updates the bundled Lighthouse version.                                 |
+| `scripts/prepare-release.ts`         | Prepares the next release, with a newer Lighthouse when there is one.   |
 | `scripts/generate-sample-reports.ts` | Makes the demo sample reports. They are not committed.                  |
 | `scripts/check-install.ts`           | Installs the packed package with npm, pnpm, yarn or bun and imports it. |
-| `.github/workflows`                  | CI, release, Lighthouse sync and Pages workflows.                       |
+| `.github/workflows`                  | CI, release, release pull request and Pages workflows.                  |
 
 ## Scripts
 
@@ -62,15 +62,20 @@ Run these from the repo root:
 
 ## Versions and releases
 
-The package version always equals the bundled Lighthouse version. You do not change it by hand.
+The package's major and minor versions equal the bundled Lighthouse's major and minor versions.
+The patch number is ours. You do not change the version by hand.
 
-1. Every day, the **Lighthouse sync** workflow checks npm for a new Lighthouse version. If there
-   is one, it updates Lighthouse, the package version, the test report and the changelog (the
-   `## Unreleased` section becomes the new version), runs `pnpm check`, and opens a pull request.
+1. The **Release pull request** workflow prepares a release. It sets the next version, moves the
+   changelog's `## Unreleased` section under that version, runs `pnpm check`, and opens a pull
+   request.
+   - Every day, it checks npm for a new Lighthouse version. If there is one, it also updates
+     Lighthouse and the test report. A new Lighthouse minor or major version starts a new `X.Y.0`;
+     a Lighthouse patch, or a release of component changes, raises our patch number.
+   - To release component changes without a new Lighthouse, run it by hand: **Actions → Release
+     pull request → Run workflow**.
 2. A maintainer reviews and merges the pull request.
 3. The **Release** workflow sees a version that has no release yet. It runs CI, publishes to npm
    with provenance (npm trusted publishing, no tokens), and creates the tag and the GitHub release.
 4. The **Pages** workflow deploys the example site with fresh sample reports.
 
-Component changes merge to `main` at any time, with a line under `## Unreleased` in the changelog,
-and ship with the next Lighthouse release.
+Component changes merge to `main` at any time, with a line under `## Unreleased` in the changelog.
