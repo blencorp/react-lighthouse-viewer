@@ -25,16 +25,17 @@ export type UrlSource = {
   /**
    * A PageSpeed Insights API key. Without one, requests share a small public quota that is often
    * used up. In the browser the key is visible, so restrict it to the PageSpeed Insights API and to
-   * your site's domain. See docs/pagespeed-api-key.md.
+   * your site's domain. See
+   * https://github.com/blencorp/react-lighthouse-viewer/blob/main/docs/pagespeed-api-key.md
    */
-  apiKey?: string;
+  apiKey?: string | undefined;
   /**
    * The device to emulate.
    * @default "mobile"
    */
-  strategy?: PageSpeedStrategy;
-  src?: never;
-  report?: never;
+  strategy?: PageSpeedStrategy | undefined;
+  src?: undefined;
+  report?: undefined;
 };
 
 /** Show a saved Lighthouse JSON report from a URL. */
@@ -44,10 +45,10 @@ export type SrcSource = {
    * origin must allow cross-origin requests (CORS).
    */
   src: string;
-  url?: never;
-  apiKey?: never;
-  strategy?: never;
-  report?: never;
+  url?: undefined;
+  apiKey?: undefined;
+  strategy?: undefined;
+  report?: undefined;
 };
 
 /** Show a report that the app already has. */
@@ -57,29 +58,30 @@ export type ReportSource = {
    * handler, a router loader, or a Server Component), so it stays the same between renders.
    */
   report: LighthouseReport | Promise<LighthouseReport>;
-  url?: never;
-  apiKey?: never;
-  strategy?: never;
-  src?: never;
+  url?: undefined;
+  apiKey?: undefined;
+  strategy?: undefined;
+  src?: undefined;
 };
 
 /** Props that every source shares. */
 export type ViewerProps = {
   /** Options for the Lighthouse report renderer, such as `disableDarkMode` or `omitTopbar`. */
-  options?: RendererOptions;
+  options?: RendererOptions | undefined;
   /**
    * Shown while the report loads (`url`, `src`, or a `report` promise).
    * @default a short status message
    */
-  fallback?: ReactNode;
+  fallback?: ReactNode | undefined;
   /**
    * Shown when the report cannot load or render. A function receives the error.
    * @default a short alert with the error message
    */
-  errorFallback?: ReactNode | ((error: Error) => ReactNode);
+  errorFallback?: ReactNode | ((error: Error) => ReactNode) | undefined;
   /** Ref to the root element, which holds the loading state, the error, or the report. */
   ref?: Ref<HTMLDivElement>;
-} & Omit<ComponentPropsWithoutRef<'div'>, 'children'>; // Go to the root element.
+  // Other div props go to the root element. It renders its own children.
+} & Omit<ComponentPropsWithoutRef<'div'>, 'children' | 'dangerouslySetInnerHTML'>;
 
 /** Pass exactly one of `url`, `src` or `report`. */
 export type LighthouseViewerProps = (UrlSource | SrcSource | ReportSource) & ViewerProps;

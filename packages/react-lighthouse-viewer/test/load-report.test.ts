@@ -6,7 +6,7 @@ import {
   reportKey,
   runPageSpeed,
 } from '../src/load-report.ts';
-import { reportLatest } from './fixtures.ts';
+import { reportLatest, requestUrl } from './fixtures.ts';
 
 const respond = (body: unknown, status = 200) =>
   vi
@@ -61,7 +61,7 @@ describe('runPageSpeed', () => {
   test('defaults to mobile and leaves out an empty key', async () => {
     const fetch = respond({ lighthouseResult: reportLatest });
     await runPageSpeed('https://psi-a.example', {});
-    const request = fetch.mock.calls[0]?.[0] as URL;
+    const request = requestUrl(fetch.mock.calls[0]?.[0]);
     expect(request.searchParams.get('strategy')).toBe('MOBILE');
     expect(request.searchParams.has('key')).toBe(false);
   });

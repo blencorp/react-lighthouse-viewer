@@ -38,29 +38,34 @@ export function LighthouseViewer(props: LighthouseViewerProps) {
   } = props;
   const isClient = useIsClient();
 
-  const loading = fallback ?? (
-    <output className="lh-viewer-loading">
-      {url !== undefined
-        ? `Running Lighthouse on ${normalizeUrl(url)}. This can take about 30 seconds.`
-        : 'Loading the Lighthouse report.'}
-    </output>
-  );
+  // `fallback={null}` shows nothing, as with `<Suspense fallback={null}>`.
+  const loading =
+    fallback !== undefined ? (
+      fallback
+    ) : (
+      <output className="lh-viewer-loading">
+        {url !== undefined
+          ? `Running Lighthouse on ${normalizeUrl(url)}. This can take about 30 seconds.`
+          : 'Loading the Lighthouse report.'}
+      </output>
+    );
   const showError = (error: Error) =>
     typeof errorFallback === 'function' ? errorFallback(error) : errorFallback;
-  const cacheKey =
-    url !== undefined
-      ? reportKey({ url, strategy, apiKey })
-      : src !== undefined
-        ? reportKey({ src })
-        : undefined;
 
   // `url` and `src` load in the browser only. The server renders the loading state, and so does
   // the first client render, so hydration matches. The load runs inside the error boundary, so a
   // render while the error shows starts no request.
   let load: (() => LighthouseReport | Promise<LighthouseReport>) | undefined;
-  if (report !== undefined) load = () => report;
-  else if (url !== undefined) load = () => runPageSpeed(url, { apiKey, strategy });
-  else if (src !== undefined) load = () => loadReportFile(src);
+  let cacheKey: string | undefined;
+  if (report !== undefined) {
+    load = () => report;
+  } else if (url !== undefined) {
+    cacheKey = reportKey({ url, strategy, apiKey });
+    load = () => runPageSpeed(url, { apiKey, strategy });
+  } else if (src !== undefined) {
+    cacheKey = reportKey({ src });
+    load = () => loadReportFile(src);
+  }
 
   let content: ReactNode;
   if (load === undefined) {

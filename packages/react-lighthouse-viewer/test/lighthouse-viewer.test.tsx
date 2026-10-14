@@ -2,7 +2,7 @@ import { createRef, StrictMode, useCallback, useDeferredValue, useState } from '
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { type LighthouseReport, LighthouseViewer, lighthouseVersion } from '../src/index.ts';
-import { reportLatest, report6 } from './fixtures.ts';
+import { reportLatest, report6, requestUrl } from './fixtures.ts';
 
 // Switches from a saved report to a website through useDeferredValue, like the example site.
 function DeferredSwitcher() {
@@ -175,7 +175,8 @@ describe('LighthouseViewer', () => {
 
   test('shows a built-in error for a value that is not a report', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const notAReport = { name: 'flow', steps: [] } as unknown as LighthouseReport;
+    // Parsed JSON is untyped, as a user flow report uploaded by a user would be.
+    const notAReport = JSON.parse('{"name":"flow","steps":[]}');
     const screen = await render(<LighthouseViewer report={notAReport} />);
 
     const alert = screen.getByRole('alert');
@@ -186,9 +187,31 @@ describe('LighthouseViewer', () => {
     expect(screen.container.querySelector('article.lh-root')).toBeNull();
   });
 
+  test('shows the renderer error when a report passes the shape check but cannot render', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    // It has the top-level fields that `isLighthouseReport` checks, but nothing the renderer needs.
+    const unrenderable = JSON.parse(
+      JSON.stringify({ lighthouseVersion, categories: {}, audits: {}, configSettings: {} }),
+    );
+    const screen = await render(<LighthouseViewer report={unrenderable} />);
+
+    const alert = screen.getByRole('alert');
+    await expect.element(alert).toBeVisible();
+    expect(alert.element().textContent).toContain('Could not determine final displayed URL');
+  });
+
+  test('shows nothing while loading when fallback is null', async () => {
+    const { promise } = Promise.withResolvers<LighthouseReport>();
+    const screen = await render(<LighthouseViewer report={promise} fallback={null} />);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(screen.container.querySelector('.lh-viewer-loading')).toBeNull();
+    expect(screen.container.textContent).toBe('');
+  });
+
   test('uses errorFallback, and recovers when the source changes', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const notAReport = {} as LighthouseReport;
+    const notAReport = JSON.parse('{}');
     const screen = await render(
       <LighthouseViewer
         report={notAReport}
@@ -226,6 +249,26 @@ describe('LighthouseViewer', () => {
     );
   });
 
+  test('loads a relative src again on a different page', async () => {
+    const start = location.href;
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => Response.json(reportLatest));
+    try {
+      history.pushState(null, '', '/team-a/');
+      const first = await render(<LighthouseViewer src="relative-report.json" />);
+      await expect.poll(() => first.container.querySelectorAll('article.lh-root').length).toBe(1);
+      await first.unmount();
+
+      history.pushState(null, '', '/team-b/');
+      const second = await render(<LighthouseViewer src="relative-report.json" />);
+      await expect.poll(() => second.container.querySelectorAll('article.lh-root').length).toBe(1);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      history.replaceState(null, '', start);
+    }
+  });
+
   test('analyzes a website url with PageSpeed Insights', async () => {
     const { promise, resolve } = Promise.withResolvers<Response>();
     const fetch = vi.spyOn(globalThis, 'fetch').mockReturnValue(promise);
@@ -239,7 +282,7 @@ describe('LighthouseViewer', () => {
     resolve(new Response(JSON.stringify({ lighthouseResult: reportLatest })));
     await expect.poll(() => screen.container.querySelectorAll('article.lh-root').length).toBe(1);
 
-    const request = fetch.mock.calls[0]?.[0] as URL;
+    const request = requestUrl(fetch.mock.calls[0]?.[0]);
     expect(request.origin + request.pathname).toBe(
       'https://www.googleapis.com/pagespeedonline/v5/runPagespeed',
     );
@@ -290,7 +333,7 @@ describe('LighthouseViewer', () => {
     const fetch = vi
       .spyOn(globalThis, 'fetch')
       .mockImplementation(async (input) =>
-        (input as URL).searchParams.has('key')
+        requestUrl(input).searchParams.has('key')
           ? Response.json({ lighthouseResult: reportLatest })
           : Response.json({ error: { code: 429, message: 'Quota exceeded' } }, { status: 429 }),
       );
@@ -302,7 +345,7 @@ describe('LighthouseViewer', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  test('keeps the current report and shows an error when a deferred source fails', async () => {
+  test('shows an error without requesting again when a deferred source fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const fetch = vi
       .spyOn(globalThis, 'fetch')
@@ -336,7 +379,8 @@ describe('LighthouseViewer', () => {
   });
 
   test('explains a missing source to plain JavaScript callers', async () => {
-    const props = {} as Parameters<typeof LighthouseViewer>[0];
+    // Plain JavaScript can pass no source; parsed JSON models that untyped call.
+    const props = JSON.parse('{}');
     const screen = await render(<LighthouseViewer {...props} />);
     const alert = screen.getByRole('alert');
     await expect.element(alert).toBeVisible();

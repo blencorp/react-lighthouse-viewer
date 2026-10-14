@@ -28,10 +28,13 @@ export function reportKey(
     | { url: string; strategy?: PageSpeedStrategy | undefined; apiKey?: string | undefined },
 ) {
   // The API key is part of the cache key: a request without one can fail on the shared quota, and
-  // a key passed after that must load again.
-  return 'src' in source
-    ? `src:${source.src}`
-    : `psi:${source.strategy ?? 'mobile'}:${source.apiKey || ''}:${normalizeUrl(source.url)}`;
+  // a key passed after that must load again. A relative `src` such as `report.json` points to a
+  // different file on each page, so the key uses the resolved URL. The server has no page URL, but
+  // there the key only resets the error boundary, so it does not need to match the browser's.
+  if ('src' in source) {
+    return `src:${typeof document === 'undefined' ? source.src : new URL(source.src, document.baseURI).href}`;
+  }
+  return `psi:${source.strategy ?? 'mobile'}:${source.apiKey || ''}:${normalizeUrl(source.url)}`;
 }
 
 /** Clears a cached source, so the next render loads it again. */
@@ -64,7 +67,10 @@ export function normalizeUrl(url: string) {
 /** Runs Lighthouse on a website through the PageSpeed Insights API. */
 export function runPageSpeed(
   url: string,
-  { apiKey, strategy = 'mobile' }: { apiKey?: string | undefined; strategy?: PageSpeedStrategy },
+  {
+    apiKey,
+    strategy = 'mobile',
+  }: { apiKey?: string | undefined; strategy?: PageSpeedStrategy | undefined },
 ): Promise<LighthouseReport> {
   const target = normalizeUrl(url);
   return cached(reportKey({ url, strategy, apiKey }), async () => {

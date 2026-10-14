@@ -11,7 +11,7 @@ type ReportContainerProps = Pick<ViewerProps, 'options'> & {
   load: () => LighthouseReport | Promise<LighthouseReport>;
 };
 
-/** Renders a resolved report into a `div` with the official Lighthouse report renderer. */
+/** Loads the report (suspending until a promise resolves) and renders it with the official Lighthouse report renderer. */
 export function ReportContainer({ load, options = {} }: ReportContainerProps) {
   const report = load();
   const resolved = report instanceof Promise ? use(report) : report;
@@ -34,7 +34,10 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
 
   // React calls the cleanup and then this callback again when one of its dependencies changes.
   const renderInto = useCallback(
-    (container: HTMLDivElement) => {
+    (container: HTMLDivElement | null) => {
+      // React calls the ref with null when an earlier call threw before it returned its cleanup.
+      // Returning here lets the error boundary show the renderer's own error.
+      if (container === null) return undefined;
       const rendererOptions: AllRendererOptions = {
         disableDarkMode,
         disableFireworks,
