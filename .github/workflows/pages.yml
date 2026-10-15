@@ -25,7 +25,12 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm reports
+        env:
+          # A key restricted to the PageSpeed Insights API, without a website restriction, because
+          # the requests come from this runner.
+          PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_SERVER_API_KEY }}
       - run: pnpm --filter example build
         env:
           # A browser key restricted to blencorp.github.io (see docs/pagespeed-api-key.md).

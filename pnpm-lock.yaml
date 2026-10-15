@@ -175,6 +175,9 @@ importers:
       oxlint-tsgolint:
         specifier: 7.0.2004
         version: 7.0.2004
+      playwright:
+        specifier: 1.64.0
+        version: 1.64.0
 
   example:
     dependencies:
