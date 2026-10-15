@@ -14,7 +14,7 @@ official Lighthouse report renderer.
 - The report looks and works like the HTML report Lighthouse writes, because it uses the same renderer.
 - One prop to show a report: a website `url`, the `src` of a saved report, or a `report` object.
 - Loading, errors and caching are built in. Built for React 19: `use`, Suspense, and promises from Server Components.
-- Renders reports from Lighthouse 6 and later.
+- Renders reports from Lighthouse 3 and later.
 - The version follows Lighthouse: `13.5.x` bundles the Lighthouse 13.5 renderer.
 - No runtime dependencies. The only peer dependencies are `react` and `react-dom` 19. Works with npm, pnpm, yarn and bun.
 - Typed props that allow exactly one source, plus a runtime check for untrusted JSON.
@@ -72,6 +72,10 @@ for how to create a free key, restrict it, and keep it off the browser.
 
 `strategy="desktop"` analyzes the desktop version. The default is `"mobile"`, as in Lighthouse.
 
+`locale="de"` asks PageSpeed Insights for a German report. The default is `"en-US"`. The report has
+the five categories of the default Lighthouse config: Performance, Accessibility, Best Practices,
+SEO and Agentic Browsing.
+
 ### Show a saved report: `src`
 
 ```tsx
@@ -81,6 +85,9 @@ for how to create a free key, restrict it, and keep it off the browser.
 `src` is the URL of a report that Lighthouse wrote, for example with
 `lighthouse https://www.example.com --output=json --output-path=public/reports/example.json`. A
 URL on another site must allow cross-origin requests (CORS). No key is needed.
+
+`src` also opens a saved PageSpeed Insights response, which keeps the report in
+`lighthouseResult`, and a saved Node runner result, which keeps it in `lhr`.
 
 ### Show a report you have: `report`
 
@@ -154,6 +161,7 @@ one.
 | `url`           | `string`                                        |                  | A public website to analyze with PageSpeed Insights.                            |
 | `apiKey`        | `string`                                        |                  | PageSpeed Insights API key. Only with `url`. See the key guide.                 |
 | `strategy`      | `'mobile' \| 'desktop'`                         | `'mobile'`       | The device to emulate. Only with `url`.                                         |
+| `locale`        | `string`                                        | `'en-US'`        | The language of the report, for example `'de'`. Only with `url`.                |
 | `src`           | `string`                                        |                  | The URL of a saved Lighthouse JSON report.                                      |
 | `report`        | `LighthouseReport \| Promise<LighthouseReport>` |                  | A report object, or a promise of one.                                           |
 | `options`       | `RendererOptions`                               | `{}`             | Options for the Lighthouse renderer. See [Renderer options](#renderer-options). |
@@ -229,10 +237,13 @@ const LighthouseViewer = lazy(() =>
 
 The report brings its own styles. They apply only inside the report element (`.lh-vars`).
 
-- **Dark mode** follows `prefers-color-scheme`. Set `disableDarkMode` to keep it light.
+- **Dark mode** follows `prefers-color-scheme` at the time the report renders. Set
+  `disableDarkMode` to keep it light.
 - **Sticky header:** the report's top bar sticks, and a score header appears at the top of the
   window as you scroll. Both expect the report to be the main content of the page. If the report
-  sits below other content, give the viewer `overflow: hidden` to turn them off.
+  sits below other content, give the viewer `overflow: hidden` to turn them off. Do not put the
+  viewer in a scroll box (a fixed height with `overflow: auto`): the score header then shows at
+  the top of the window, outside the box. Use `omitTopbar` there.
 - **Theme** with the report's CSS variables:
 
 ```css
@@ -255,8 +266,9 @@ The package exports these types:
 Every prop has documentation that shows in your editor.
 
 `isLighthouseReport(value)` is a type guard. Use it for JSON that users upload or that you fetch.
-It checks the top-level shape the renderer needs (`lighthouseVersion`, `categories`, `audits`,
-`configSettings`), not every audit. For a report file in your own repo, a cast
+It checks the top-level fields that every report has (`lighthouseVersion`, `categories`, `audits`,
+`configSettings`), not every field that the renderer reads. A report that passes the check but
+cannot render shows the renderer's error. For a report file in your own repo, a cast
 (`report as LighthouseReport`) is fine, because TypeScript widens string literals in imported JSON.
 
 `lighthouseVersion` is the Lighthouse version that the package bundles.
@@ -304,7 +316,11 @@ npm install @blen/react-lighthouse-viewer
 
 ## Limitations
 
-- The package renders single reports. It does not render user flow reports (`FlowResult`).
+- The package renders single reports. It does not render user flow reports (`FlowResult`). To
+  show one step of a flow, pass `report={flow.steps[0].lhr}`.
+- **View Treemap** (in the Performance section) and **Open in Viewer** (in the tools menu) open
+  the Lighthouse apps on `googlechrome.github.io` and send the report to them. On a `*.vercel.app`
+  host, the renderer opens `/gh-pages` on that host instead, which usually does not exist.
 - Each `url` and `src` result stays cached until the page reloads. To run Lighthouse on the same
   website again, reload the page.
 - The Lighthouse renderer adds listeners to the page (for copy, print, screen size and scroll) and

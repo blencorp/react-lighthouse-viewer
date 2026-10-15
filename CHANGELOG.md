@@ -6,6 +6,19 @@ renderer changes, see the [Lighthouse releases](https://github.com/GoogleChrome/
 
 ## Unreleased
 
+- Reports from Lighthouse 12.5 and older show their Performance audits again. The renderer lists
+  them only when the report has an `insights` group, which Lighthouse added in 12.6.
+- `url` reports include the Agentic Browsing category, as reports from the Lighthouse CLI do.
+- New `locale` prop for `url`: PageSpeed Insights returns the report in that language.
+- `src` opens a saved PageSpeed Insights response (`lighthouseResult`) and a saved Node runner
+  result (`lhr`).
+- A user flow report shows an error that tells you to pass one step, not "is not a Lighthouse
+  report".
+- `url` shows an error when PageSpeed Insights returns a report with a runtime error, instead of a
+  report with no scores.
+- Reports from Lighthouse 3 and later render. The tests now include reports from Lighthouse 3, 6
+  and 11.
+
 ## 13.5.3
 
 - Error messages for `src` leave out the query string, which can hold a signed token.

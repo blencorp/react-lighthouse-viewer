@@ -2,7 +2,7 @@ import { createRef, StrictMode, useCallback, useDeferredValue, useState } from '
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { type LighthouseReport, LighthouseViewer, lighthouseVersion } from '../src/index.ts';
-import { reportLatest, report6, requestUrl } from './fixtures.ts';
+import { report3, report6, report11, reportLatest, requestUrl } from './fixtures.ts';
 
 // Switches from a saved report to a website through useDeferredValue, like the example site.
 function DeferredSwitcher() {
@@ -40,14 +40,24 @@ describe('LighthouseViewer', () => {
     expect(container.querySelector('.lh-topbar__url')?.textContent).toContain('example.com');
   });
 
-  test('renders a Lighthouse 6 report through the renderer upgrade', async () => {
-    const { container } = await render(<LighthouseViewer report={report6} />);
+  test.each([
+    ['3', report3],
+    ['6', report6],
+    ['11', report11],
+  ])('renders a Lighthouse %s report with its Performance audits', async (_version, report) => {
+    const { container } = await render(<LighthouseViewer report={report} />);
 
     expect(container.querySelectorAll('article.lh-root')).toHaveLength(1);
     expect(gaugeTitles(container)).toContain('Performance');
     expect(container.querySelector('.lh-footer__version')?.textContent).toBe(
-      report6.lighthouseVersion,
+      report.lighthouseVersion,
     );
+    expect(container.querySelectorAll('#performance .lh-audit').length).toBeGreaterThan(20);
+  });
+
+  test('renders the Performance audits of a current report', async () => {
+    const { container } = await render(<LighthouseViewer report={reportLatest} />);
+    expect(container.querySelectorAll('#performance .lh-audit').length).toBeGreaterThan(20);
   });
 
   test('renders one report in StrictMode and clears it on unmount', async () => {
@@ -175,8 +185,8 @@ describe('LighthouseViewer', () => {
 
   test('shows a built-in error for a value that is not a report', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    // Parsed JSON is untyped, as a user flow report uploaded by a user would be.
-    const notAReport = JSON.parse('{"name":"flow","steps":[]}');
+    // Parsed JSON is untyped, as a file uploaded by a user would be.
+    const notAReport = JSON.parse('{"name":"not a report"}');
     const screen = await render(<LighthouseViewer report={notAReport} />);
 
     const alert = screen.getByRole('alert');
@@ -185,6 +195,18 @@ describe('LighthouseViewer', () => {
       'LighthouseViewer: `report` is not a Lighthouse report.',
     );
     expect(screen.container.querySelector('article.lh-root')).toBeNull();
+  });
+
+  test('explains that a user flow report needs one step', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const flow = JSON.parse(JSON.stringify({ name: 'flow', steps: [{ lhr: reportLatest }] }));
+    const screen = await render(<LighthouseViewer report={flow} />);
+
+    const alert = screen.getByRole('alert');
+    await expect.element(alert).toBeVisible();
+    expect(alert.element().textContent).toContain(
+      '`report` is a Lighthouse user flow report, which LighthouseViewer cannot show. Pass one step instead, for example `report={flow.steps[0].lhr}`.',
+    );
   });
 
   test('shows the renderer error when a report passes the shape check but cannot render', async () => {
@@ -310,7 +332,7 @@ describe('LighthouseViewer', () => {
     const { promise, resolve } = Promise.withResolvers<Response>();
     const fetch = vi.spyOn(globalThis, 'fetch').mockReturnValue(promise);
     const screen = await render(
-      <LighthouseViewer url="www.site-b.gov" apiKey="test-key" strategy="desktop" />,
+      <LighthouseViewer url="www.site-b.gov" apiKey="test-key" strategy="desktop" locale="de" />,
     );
     await expect
       .element(screen.getByText(/Running Lighthouse on https:\/\/www\.site-b\.gov/))
@@ -326,11 +348,13 @@ describe('LighthouseViewer', () => {
     expect(request.searchParams.get('url')).toBe('https://www.site-b.gov');
     expect(request.searchParams.get('key')).toBe('test-key');
     expect(request.searchParams.get('strategy')).toBe('DESKTOP');
+    expect(request.searchParams.get('locale')).toBe('de');
     expect(request.searchParams.getAll('category')).toEqual([
       'PERFORMANCE',
       'ACCESSIBILITY',
       'BEST_PRACTICES',
       'SEO',
+      'AGENTIC_BROWSING',
     ]);
   });
 

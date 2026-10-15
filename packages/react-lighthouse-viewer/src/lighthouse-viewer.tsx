@@ -28,6 +28,7 @@ export function LighthouseViewer(props: LighthouseViewerProps) {
     url,
     apiKey,
     strategy,
+    locale,
     src,
     report,
     fallback,
@@ -60,8 +61,8 @@ export function LighthouseViewer(props: LighthouseViewerProps) {
   if (report !== undefined) {
     load = () => report;
   } else if (url !== undefined) {
-    cacheKey = reportKey({ url, strategy, apiKey });
-    load = () => runPageSpeed(url, { apiKey, strategy });
+    cacheKey = reportKey({ url, strategy, locale, apiKey });
+    load = () => runPageSpeed(url, { apiKey, strategy, locale });
   } else if (src !== undefined) {
     cacheKey = reportKey({ src });
     load = () => loadReportFile(src);
