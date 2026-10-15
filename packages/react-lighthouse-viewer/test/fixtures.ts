@@ -13,7 +13,8 @@ function asReport(json: unknown): LighthouseReport {
 export const reportLatest = asReport(lhLatest);
 export const report6 = asReport(lh6);
 // The official Lighthouse test reports for 3.0.0 and 11.7.0 (report/test-assets in the Lighthouse
-// repo), minified.
+// repo), minified. In the 11.7.0 report, the tested site's Firebase API key in its request URLs is
+// replaced by REDACTED, so secret scanners do not flag the repo.
 export const report3 = asReport(lh3);
 export const report11 = asReport(lh11);
 
