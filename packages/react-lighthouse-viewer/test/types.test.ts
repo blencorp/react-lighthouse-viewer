@@ -13,6 +13,7 @@ test('LighthouseViewer takes exactly one source', () => {
   expectTypeOf({}).not.toExtend<LighthouseViewerProps>();
   expectTypeOf({ src: '/report.json', report: reportLatest }).not.toExtend<LighthouseViewerProps>();
   expectTypeOf({ src: '/report.json', apiKey: 'k' }).not.toExtend<LighthouseViewerProps>();
+  expectTypeOf({ src: '/report.json', locale: 'de' }).not.toExtend<LighthouseViewerProps>();
   expectTypeOf({
     url: 'https://www.blencorp.com',
     strategy: 'tablet' as const,
@@ -25,6 +26,7 @@ test('LighthouseViewer accepts undefined for optional props', () => {
     url: 'https://www.blencorp.com',
     apiKey: undefined,
     strategy: undefined,
+    locale: undefined,
     options: undefined,
     fallback: undefined,
     errorFallback: undefined,

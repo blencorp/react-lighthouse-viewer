@@ -19,3 +19,11 @@ export function isLighthouseReport(value: unknown): value is LighthouseReport {
 export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+/** A Lighthouse user flow result (`FlowResult`), which holds one report for each step. */
+export function isFlowResult(value: unknown): value is { steps: unknown[] } {
+  return isObject(value) && Array.isArray(value['steps']);
+}
+
+export const flowResultHint =
+  'is a Lighthouse user flow report, which LighthouseViewer cannot show. Pass one step instead, for example `report={flow.steps[0].lhr}`.';

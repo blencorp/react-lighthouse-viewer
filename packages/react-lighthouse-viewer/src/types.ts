@@ -4,7 +4,7 @@ import type Result from 'lighthouse/types/lhr/lhr.js';
 
 /**
  * A Lighthouse result (LHR): the JSON that `lighthouse --output=json` writes, or the
- * `lighthouseResult` of a PageSpeed Insights response. Reports from Lighthouse 6 and later render;
+ * `lighthouseResult` of a PageSpeed Insights response. Reports from Lighthouse 3 and later render;
  * the renderer upgrades older formats.
  */
 export type LighthouseReport = Result;
@@ -34,6 +34,12 @@ export type UrlSource = {
    * @default "mobile"
    */
   strategy?: PageSpeedStrategy | undefined;
+  /**
+   * The language of the report, for example `"de"` or `"pt-BR"`. PageSpeed Insights translates
+   * the report text and formats numbers for this locale.
+   * @default "en-US"
+   */
+  locale?: string | undefined;
   src?: undefined;
   report?: undefined;
 };
@@ -48,6 +54,7 @@ export type SrcSource = {
   url?: undefined;
   apiKey?: undefined;
   strategy?: undefined;
+  locale?: undefined;
   report?: undefined;
 };
 
@@ -61,6 +68,7 @@ export type ReportSource = {
   url?: undefined;
   apiKey?: undefined;
   strategy?: undefined;
+  locale?: undefined;
   src?: undefined;
 };
 

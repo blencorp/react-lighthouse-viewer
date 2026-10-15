@@ -1,6 +1,6 @@
 import { renderReport } from 'lighthouse/dist/report/bundle.esm.js';
 import { use, useCallback } from 'react';
-import { isLighthouseReport } from './is-lighthouse-report.ts';
+import { flowResultHint, isFlowResult, isLighthouseReport } from './is-lighthouse-report.ts';
 import type { LighthouseReport, RendererOptions, ViewerProps } from './types.ts';
 
 // Every renderer option, each required. If a Lighthouse update adds an option, the object below
@@ -38,6 +38,7 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
       // React calls the ref with null when an earlier call threw before it returned its cleanup.
       // Returning here lets the error boundary show the renderer's own error.
       if (container === null) return undefined;
+      const prepared = withInsightsGroup(resolved);
       const rendererOptions: AllRendererOptions = {
         disableDarkMode,
         disableFireworks,
@@ -48,10 +49,14 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
         getStandaloneReportHTML,
         onPageAnchorRendered,
         onPrintOverride,
-        onSaveFileOverride,
+        // The renderer saves files only from the top bar.
+        onSaveFileOverride: omitTopbar
+          ? onSaveFileOverride
+          : (blob, filename) =>
+              saveFile(blob, filename, { resolved, prepared, onSaveFileOverride }),
         onViewTrace,
       };
-      container.replaceChildren(renderReport(resolved, rendererOptions));
+      container.replaceChildren(renderReport(prepared, rendererOptions));
       return () => container.replaceChildren();
     },
     [
@@ -71,6 +76,7 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
   );
 
   // Fail with a clear message, so an error boundary shows it instead of a renderer internal error.
+  if (isFlowResult(resolved)) throw new TypeError(`LighthouseViewer: \`report\` ${flowResultHint}`);
   if (!isLighthouseReport(resolved)) {
     throw new TypeError(
       'LighthouseViewer: `report` is not a Lighthouse report. It needs `lighthouseVersion`, `categories`, `audits` and `configSettings`.',
@@ -78,4 +84,44 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
   }
 
   return <div ref={renderInto} />;
+}
+
+// The renderer lists the Performance audits only when the report has both an `insights` and a
+// `diagnostics` group. Lighthouse added `insights` in 12.6, and the renderer's upgrade of older
+// reports does not add it, so their Performance section would show no audits. An empty group is
+// enough, because the renderer shows a group only when it holds an audit.
+function withInsightsGroup(report: LighthouseReport): LighthouseReport {
+  if (!report.categories['performance'] || report.categoryGroups?.['insights']) return report;
+  return { ...report, categoryGroups: { ...report.categoryGroups, insights: { title: '' } } };
+}
+
+async function saveFile(
+  blob: Blob,
+  filename: string,
+  {
+    resolved,
+    prepared,
+    onSaveFileOverride,
+  }: {
+    resolved: LighthouseReport;
+    prepared: LighthouseReport;
+    onSaveFileOverride: RendererOptions['onSaveFileOverride'];
+  },
+) {
+  let file = blob;
+  // The renderer saves the report that it rendered. The JSON file keeps the report as the app
+  // passed it, without the added insights group.
+  if (blob.type === 'application/json' && prepared !== resolved) {
+    file = new Blob([JSON.stringify(resolved, null, 2)], { type: blob.type });
+  }
+  if (onSaveFileOverride) return onSaveFileOverride(file, filename);
+  // The same download as the renderer's own.
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = URL.createObjectURL(file);
+  // Firefox downloads only from a link that is in the document.
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 500);
 }

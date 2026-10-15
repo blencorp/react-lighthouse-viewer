@@ -1,10 +1,22 @@
-import { isLighthouseReport, isObject } from './is-lighthouse-report.ts';
+import {
+  flowResultHint,
+  isFlowResult,
+  isLighthouseReport,
+  isObject,
+} from './is-lighthouse-report.ts';
 import type { LighthouseReport, PageSpeedStrategy } from './types.ts';
 
 const pageSpeedEndpoint = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
 const keyGuide =
   'https://github.com/blencorp/react-lighthouse-viewer/blob/main/docs/pagespeed-api-key.md';
-const pageSpeedCategories = ['PERFORMANCE', 'ACCESSIBILITY', 'BEST_PRACTICES', 'SEO'];
+// The categories of the default Lighthouse config, in the order that the CLI report shows them.
+const pageSpeedCategories = [
+  'PERFORMANCE',
+  'ACCESSIBILITY',
+  'BEST_PRACTICES',
+  'SEO',
+  'AGENTIC_BROWSING',
+];
 
 // React's `use` needs the same promise on every render, so each source keeps one promise. A failed
 // promise stays cached until its error is on screen: React retries a render after an error, and a
@@ -25,7 +37,12 @@ function cached(key: string, load: () => Promise<LighthouseReport>) {
 export function reportKey(
   source:
     | { src: string }
-    | { url: string; strategy?: PageSpeedStrategy | undefined; apiKey?: string | undefined },
+    | {
+        url: string;
+        strategy?: PageSpeedStrategy | undefined;
+        locale?: string | undefined;
+        apiKey?: string | undefined;
+      },
 ) {
   // The API key is part of the cache key: a request without one can fail on the shared quota, and
   // a key passed after that must load again. A relative `src` such as `report.json` points to a
@@ -34,7 +51,7 @@ export function reportKey(
   if ('src' in source) {
     return `src:${typeof document === 'undefined' ? source.src : new URL(source.src, document.baseURI).href}`;
   }
-  return `psi:${source.strategy ?? 'mobile'}:${source.apiKey || ''}:${normalizeUrl(source.url)}`;
+  return `psi:${source.strategy ?? 'mobile'}:${source.locale || ''}:${source.apiKey || ''}:${normalizeUrl(source.url)}`;
 }
 
 /** Clears a cached source, so the next render loads it again. */
@@ -56,9 +73,20 @@ export function loadReportFile(src: string): Promise<LighthouseReport> {
     } catch {
       throw new Error(`${shown} did not return JSON.`);
     }
-    if (!isLighthouseReport(json)) throw new Error(`${shown} is not a Lighthouse report.`);
-    return json;
+    const report = unwrapReport(json);
+    if (report) return report;
+    if (isFlowResult(json)) throw new Error(`${shown} ${flowResultHint}`);
+    throw new Error(`${shown} is not a Lighthouse report.`);
   });
+}
+
+// A saved PageSpeed Insights response keeps the report in `lighthouseResult`, and a saved Node
+// runner result keeps it in `lhr`. The official Lighthouse Viewer opens both.
+function unwrapReport(json: unknown): LighthouseReport | undefined {
+  if (isLighthouseReport(json)) return json;
+  if (!isObject(json)) return undefined;
+  const inner = json['lighthouseResult'] ?? json['lhr'];
+  return isLighthouseReport(inner) ? inner : undefined;
 }
 
 /** Adds `https://` when the URL has no protocol, as people often type `www.example.com`. */
@@ -73,14 +101,20 @@ export function runPageSpeed(
   {
     apiKey,
     strategy = 'mobile',
-  }: { apiKey?: string | undefined; strategy?: PageSpeedStrategy | undefined },
+    locale,
+  }: {
+    apiKey?: string | undefined;
+    strategy?: PageSpeedStrategy | undefined;
+    locale?: string | undefined;
+  },
 ): Promise<LighthouseReport> {
   const target = normalizeUrl(url);
-  return cached(reportKey({ url, strategy, apiKey }), async () => {
+  return cached(reportKey({ url, strategy, locale, apiKey }), async () => {
     const request = new URL(pageSpeedEndpoint);
     request.searchParams.set('url', target);
     request.searchParams.set('strategy', strategy.toUpperCase());
     for (const category of pageSpeedCategories) request.searchParams.append('category', category);
+    if (locale) request.searchParams.set('locale', locale);
     if (apiKey) request.searchParams.set('key', apiKey);
 
     let response: Response;
@@ -99,6 +133,12 @@ export function runPageSpeed(
     const report = isObject(body) ? body['lighthouseResult'] : undefined;
     if (!isLighthouseReport(report)) {
       throw new Error('PageSpeed Insights did not return a Lighthouse report.');
+    }
+    // A run that failed part way can still return a report, with null scores.
+    if (report.runtimeError) {
+      throw new Error(
+        `PageSpeed Insights could not analyze the page: ${report.runtimeError.message}`,
+      );
     }
     return report;
   });

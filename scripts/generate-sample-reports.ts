@@ -72,7 +72,14 @@ async function runPageSpeed(url: string): Promise<Report> {
   const request = new URL('https://www.googleapis.com/pagespeedonline/v5/runPagespeed');
   request.searchParams.set('url', url);
   request.searchParams.set('strategy', 'MOBILE');
-  for (const category of ['PERFORMANCE', 'ACCESSIBILITY', 'BEST_PRACTICES', 'SEO']) {
+  // The same categories as the component's `url` source.
+  for (const category of [
+    'PERFORMANCE',
+    'ACCESSIBILITY',
+    'BEST_PRACTICES',
+    'SEO',
+    'AGENTIC_BROWSING',
+  ]) {
     request.searchParams.append('category', category);
   }
   const key = process.env['PAGESPEED_API_KEY'];

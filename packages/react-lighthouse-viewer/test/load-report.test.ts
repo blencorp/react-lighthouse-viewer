@@ -39,10 +39,25 @@ describe('loadReportFile', () => {
   });
 
   test('rejects JSON that is not a report', async () => {
-    respond({ steps: [] });
+    respond({ name: 'not a report' });
     await expect(loadReportFile('/load-b.json')).rejects.toThrow(
       '/load-b.json is not a Lighthouse report.',
     );
+  });
+
+  test('explains that a user flow report needs one step', async () => {
+    respond({ name: 'flow', steps: [{ lhr: reportLatest }] });
+    await expect(loadReportFile('/load-f.json')).rejects.toThrow(
+      '/load-f.json is a Lighthouse user flow report, which LighthouseViewer cannot show.',
+    );
+  });
+
+  test.each([
+    ['a saved PageSpeed Insights response', '/load-d.json', { lighthouseResult: reportLatest }],
+    ['a saved Node runner result', '/load-e.json', { lhr: reportLatest, report: '{}' }],
+  ])('opens the report inside %s', async (_name, src, body) => {
+    respond(body);
+    await expect(loadReportFile(src)).resolves.toEqual(reportLatest);
   });
 
   test('keeps a failed load until it is forgotten, then loads again', async () => {
@@ -64,6 +79,27 @@ describe('runPageSpeed', () => {
     const request = requestUrl(fetch.mock.calls[0]?.[0]);
     expect(request.searchParams.get('strategy')).toBe('MOBILE');
     expect(request.searchParams.has('key')).toBe(false);
+  });
+
+  test('sends the locale and keeps a cache entry for each locale', async () => {
+    const fetch = respond({ lighthouseResult: reportLatest });
+    await runPageSpeed('https://psi-f.example', { locale: 'pt-BR' });
+    expect(requestUrl(fetch.mock.calls[0]?.[0]).searchParams.get('locale')).toBe('pt-BR');
+    expect(reportKey({ url: 'https://psi-f.example', locale: 'pt-BR' })).not.toBe(
+      reportKey({ url: 'https://psi-f.example' }),
+    );
+  });
+
+  test('rejects a report that ends with a runtime error', async () => {
+    respond({
+      lighthouseResult: {
+        ...reportLatest,
+        runtimeError: { code: 'NO_FCP', message: 'The page did not paint any content.' },
+      },
+    });
+    await expect(runPageSpeed('https://psi-g.example', {})).rejects.toThrow(
+      'PageSpeed Insights could not analyze the page: The page did not paint any content.',
+    );
   });
 
   test('explains the shared quota when there is no key', async () => {
