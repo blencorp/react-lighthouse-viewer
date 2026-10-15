@@ -11,6 +11,23 @@ export default defineConfig({
   deps: { onlyBundle: ['lighthouse', 'devtools-protocol'] },
   plugins: [
     {
+      // `?raw` imports load a file as a string, as Vite does in the tests. The standalone HTML file
+      // needs Lighthouse's template and standalone renderer as text.
+      name: 'raw-text',
+      resolveId: {
+        filter: { id: /\?raw$/ },
+        async handler(source, importer) {
+          const resolved = await this.resolve(source.slice(0, -'?raw'.length), importer);
+          return resolved && `${resolved.id}?raw`;
+        },
+      },
+      load: {
+        filter: { id: /\?raw$/ },
+        handler: (id) =>
+          `export default ${JSON.stringify(readFileSync(id.slice(0, -'?raw'.length), 'utf8'))};`,
+      },
+    },
+    {
       // Lighthouse's report types use one Chrome DevTools Protocol type. This loads a small
       // stand-in so the 600 KB protocol typings stay out of the published declarations.
       name: 'devtools-protocol-types-shim',
@@ -28,6 +45,8 @@ export default defineConfig({
     manualChunks: (id) => {
       // Declaration modules go through this build too; leave them to the declaration output.
       if (/\.d\.ts$|\/src\/index\.ts$|\/lighthouse\/package\.json$/.test(id)) return undefined;
+      // The HTML file's code loads only when the user saves, so it stays a chunk of its own.
+      if (/\/src\/standalone-html\.ts$|\?raw$/.test(id)) return 'standalone-html';
       return id.endsWith('/src/is-lighthouse-report.ts')
         ? 'is-lighthouse-report'
         : 'lighthouse-viewer';

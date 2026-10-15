@@ -39,6 +39,9 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
       // Returning here lets the error boundary show the renderer's own error.
       if (container === null) return undefined;
       const prepared = withInsightsGroup(resolved);
+      // Without a `getStandaloneReportHTML` of the app's own, the component makes the HTML file.
+      // Save as HTML is in the top bar, and the renderer throws if the option is set without it.
+      const builtInHtml = getStandaloneReportHTML === undefined && !omitTopbar;
       const rendererOptions: AllRendererOptions = {
         disableDarkMode,
         disableFireworks,
@@ -46,14 +49,16 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
         omitTopbar,
         omitGlobalStyles,
         occupyEntireViewport,
-        getStandaloneReportHTML,
+        // The menu shows Save as HTML only when this is set. The real file comes from
+        // `saveFile`, because the renderer asks for the HTML synchronously.
+        getStandaloneReportHTML: builtInHtml ? () => '' : getStandaloneReportHTML,
         onPageAnchorRendered,
         onPrintOverride,
         // The renderer saves files only from the top bar.
         onSaveFileOverride: omitTopbar
           ? onSaveFileOverride
           : (blob, filename) =>
-              saveFile(blob, filename, { resolved, prepared, onSaveFileOverride }),
+              saveFile(blob, filename, { resolved, prepared, builtInHtml, onSaveFileOverride }),
         onViewTrace,
       };
       container.replaceChildren(renderReport(prepared, rendererOptions));
@@ -95,16 +100,20 @@ function withInsightsGroup(report: LighthouseReport): LighthouseReport {
   return { ...report, categoryGroups: { ...report.categoryGroups, insights: { title: '' } } };
 }
 
+// The renderer passes each file that the user saves (JSON or HTML) to `onSaveFileOverride`, which
+// can wait. So the standalone renderer (about 190 kB) loads only when the user saves as HTML.
 async function saveFile(
   blob: Blob,
   filename: string,
   {
     resolved,
     prepared,
+    builtInHtml,
     onSaveFileOverride,
   }: {
     resolved: LighthouseReport;
     prepared: LighthouseReport;
+    builtInHtml: boolean;
     onSaveFileOverride: RendererOptions['onSaveFileOverride'];
   },
 ) {
@@ -113,6 +122,10 @@ async function saveFile(
   // passed it, without the added insights group.
   if (blob.type === 'application/json' && prepared !== resolved) {
     file = new Blob([JSON.stringify(resolved, null, 2)], { type: blob.type });
+  }
+  if (blob.type === 'text/html' && builtInHtml) {
+    const { standaloneReportHtml } = await import('./standalone-html.ts');
+    file = new Blob([standaloneReportHtml(prepared)], { type: 'text/html' });
   }
   if (onSaveFileOverride) return onSaveFileOverride(file, filename);
   // The same download as the renderer's own.

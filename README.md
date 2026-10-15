@@ -181,18 +181,25 @@ one.
 />
 ```
 
-| Option                    | Type                                              | Description                                                                    |
-| ------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `disableDarkMode`         | `boolean`                                         | Do not switch to dark mode when the user prefers it.                           |
-| `disableFireworks`        | `boolean`                                         | Do not show the fireworks when all core categories score 100.                  |
-| `omitTopbar`              | `boolean`                                         | Hide the top bar (URL, tools menu, sticky score header).                       |
-| `omitGlobalStyles`        | `boolean`                                         | Do not inject the report styles. Use this when the page already includes them. |
-| `occupyEntireViewport`    | `boolean`                                         | Make the report fill the viewport. Use this when the report is the whole page. |
-| `getStandaloneReportHTML` | `() => string`                                    | Shows **Save as HTML** in the tools menu and supplies the HTML to save.        |
-| `onSaveFileOverride`      | `(blob: Blob, filename: string) => Promise<void>` | Called to save JSON or HTML, instead of a browser download.                    |
-| `onPrintOverride`         | `(rootEl: HTMLElement) => Promise<void>`          | Called to print, instead of `window.print()`.                                  |
-| `onViewTrace`             | `() => void`                                      | Shows a **View Trace** action and calls this when the user clicks it.          |
-| `onPageAnchorRendered`    | `(link: HTMLAnchorElement) => void`               | Called for each in-report anchor link, so you can change its `href`.           |
+| Option                    | Type                                              | Description                                                                     |
+| ------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `disableDarkMode`         | `boolean`                                         | Do not switch to dark mode when the user prefers it.                            |
+| `disableFireworks`        | `boolean`                                         | Do not show the fireworks when all core categories score 100.                   |
+| `omitTopbar`              | `boolean`                                         | Hide the top bar (URL, tools menu, sticky score header).                        |
+| `omitGlobalStyles`        | `boolean`                                         | Do not inject the report styles. Use this when the page already includes them.  |
+| `occupyEntireViewport`    | `boolean`                                         | Make the report fill the viewport. Use this when the report is the whole page.  |
+| `getStandaloneReportHTML` | `() => string`                                    | Supplies your own HTML for **Save as HTML**. See [Save as HTML](#save-as-html). |
+| `onSaveFileOverride`      | `(blob: Blob, filename: string) => Promise<void>` | Called to save JSON or HTML, instead of a browser download.                     |
+| `onPrintOverride`         | `(rootEl: HTMLElement) => Promise<void>`          | Called to print, instead of `window.print()`.                                   |
+| `onViewTrace`             | `() => void`                                      | Shows a **View Trace** action and calls this when the user clicks it.           |
+| `onPageAnchorRendered`    | `(link: HTMLAnchorElement) => void`               | Called for each in-report anchor link, so you can change its `href`.            |
+
+#### Save as HTML
+
+The tools menu has **Save as HTML**. The file is one HTML page that works offline, the same as
+`lighthouse --output=html` writes. Its code (about 50 kB gzipped) loads only when the user saves,
+so it does not add to your bundle. To save the file somewhere else, for example to your server,
+pass `onSaveFileOverride`. To supply your own HTML, pass `getStandaloneReportHTML`.
 
 The report renders again when its source, an option value, or a callback changes. Option values
 are compared by value, so an inline `options={{ ... }}` object is fine. Callbacks are compared by

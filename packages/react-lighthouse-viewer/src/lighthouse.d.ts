@@ -9,3 +9,14 @@ declare module 'lighthouse/dist/report/bundle.esm.js' {
     options?: { [Name in keyof Renderer.Options]?: Renderer.Options[Name] | undefined },
   ): HTMLElement;
 }
+
+// Loaded as text: by Vite's `?raw` in the tests and the example, and by a plugin in
+// tsdown.config.ts for the package build.
+declare module 'lighthouse/report/assets/standalone-template.html?raw' {
+  const text: string;
+  export default text;
+}
+declare module 'lighthouse/dist/report/standalone.js?raw' {
+  const text: string;
+  export default text;
+}

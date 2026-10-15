@@ -200,6 +200,83 @@ describe('LighthouseViewer', () => {
     await expect.poll(() => downloads).toEqual([expect.stringMatching(/\.json$/)]);
   });
 
+  test('saves the report as an HTML file that renders on its own', async () => {
+    const saved = Promise.withResolvers<{ blob: Blob; filename: string }>();
+    const screen = await render(
+      <LighthouseViewer
+        report={report6}
+        options={{
+          onSaveFileOverride: async (blob, filename) => saved.resolve({ blob, filename }),
+        }}
+      />,
+    );
+    await screen.getByRole('button', { name: 'Toggle report tools menu' }).click();
+    await screen.getByRole('menuitem', { name: 'Save as HTML' }).click();
+
+    const { blob, filename } = await saved.promise;
+    expect(filename).toMatch(/\.html$/);
+    expect(blob.type).toBe('text/html');
+    const html = await blob.text();
+    expect(html).toContain('__initLighthouseReport__();');
+
+    // The file renders with Lighthouse's own standalone renderer, with the Performance audits of
+    // this Lighthouse 6 report.
+    const frame = document.createElement('iframe');
+    frame.srcdoc = html;
+    document.body.append(frame);
+    try {
+      await expect
+        .poll(() => frame.contentDocument?.querySelectorAll('#performance .lh-audit').length ?? 0)
+        .toBeGreaterThan(20);
+      expect(frame.contentDocument?.querySelector('.lh-footer__version')?.textContent).toBe(
+        report6.lighthouseVersion,
+      );
+    } finally {
+      frame.remove();
+    }
+  });
+
+  test('downloads the HTML file when there is no onSaveFileOverride', async () => {
+    const downloads: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloads.push(this.download);
+    });
+    const screen = await render(<LighthouseViewer report={reportLatest} />);
+    await screen.getByRole('button', { name: 'Toggle report tools menu' }).click();
+    await screen.getByRole('menuitem', { name: 'Save as HTML' }).click();
+
+    await expect.poll(() => downloads).toEqual([expect.stringMatching(/\.html$/)]);
+  });
+
+  test("keeps the app's own getStandaloneReportHTML and passes JSON through", async () => {
+    const files: { type: string; text: string }[] = [];
+    const screen = await render(
+      <LighthouseViewer
+        report={reportLatest}
+        options={{
+          getStandaloneReportHTML: () => '<p>From the app</p>',
+          onSaveFileOverride: async (blob) => {
+            files.push({ type: blob.type, text: await blob.text() });
+          },
+        }}
+      />,
+    );
+    const tools = screen.getByRole('button', { name: 'Toggle report tools menu' });
+    await tools.click();
+    await screen.getByRole('menuitem', { name: 'Save as HTML' }).click();
+    await tools.click();
+    await screen.getByRole('menuitem', { name: 'Save as JSON' }).click();
+
+    await expect.poll(() => files.length).toBe(2);
+    expect(files[0]).toEqual({ type: 'text/html', text: '<p>From the app</p>' });
+    expect(files[1]?.type).toBe('application/json');
+    expect(JSON.parse(files[1]?.text ?? '')).toMatchObject({
+      lighthouseVersion: reportLatest.lighthouseVersion,
+    });
+  });
+
   test('shows the fallback while a report promise loads, then the report', async () => {
     const { promise, resolve } = Promise.withResolvers<LighthouseReport>();
     const screen = await render(
