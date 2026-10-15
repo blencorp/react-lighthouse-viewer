@@ -54,6 +54,8 @@ export function App() {
   const selectSample = (slug: string) => {
     setCustom(null);
     location.hash = slug;
+    // The report is below the cards, so bring it into view.
+    document.getElementById('report')?.scrollIntoView({ block: 'start' });
   };
 
   const showCustom = (next: View) => setCustom({ view: next, at: hash });
@@ -119,12 +121,16 @@ export function App() {
       <section className="container section" aria-labelledby="samples-title">
         <div className="section-heading">
           <h2 id="samples-title">Sample reports</h2>
-          <p>Fresh Lighthouse runs. Pick a site to open its full report.</p>
+          <p>PageSpeed Insights runs, refreshed every week. Pick a site to open its full report.</p>
         </div>
         <SampleGrid samples={samples} active={activeSlug} onSelect={selectSample} />
       </section>
 
-      <section className="container section viewer" aria-label={shown?.title ?? 'Report'}>
+      <section
+        id="report"
+        className="container section viewer"
+        aria-label={shown?.title ?? 'Report'}
+      >
         <div className="toolbar">
           <div className="toolbar-row">
             <div className="toolbar-title">

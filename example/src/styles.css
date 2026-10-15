@@ -48,6 +48,10 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   background: var(--page-bg);
@@ -458,7 +462,7 @@ h2 {
 
 .card-shot {
   display: block;
-  height: 120px;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
@@ -628,6 +632,10 @@ h2 {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 20px;
+}
+
+.viewer {
+  scroll-margin-top: 16px;
 }
 
 .report-frame {
@@ -806,6 +814,10 @@ h2 {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .card,
   .switch-track,
   .switch-thumb {

@@ -24,8 +24,16 @@ VITE_PAGESPEED_API_KEY=your-key
 ```
 
 [docs/pagespeed-api-key.md](./docs/pagespeed-api-key.md) explains how to create and restrict a
-key. The Pages workflow reads the deployed site's key from the `PAGESPEED_API_KEY` repository
-secret.
+key. `pnpm reports` also uses PageSpeed Insights, from Node, so it needs a key without a website
+restriction in `PAGESPEED_API_KEY`:
+
+```sh
+PAGESPEED_API_KEY=your-server-key pnpm reports
+```
+
+The Pages workflow uses two repository secrets: `PAGESPEED_API_KEY`, the deployed site's browser
+key (restricted to `blencorp.github.io`), and `PAGESPEED_SERVER_API_KEY`, the key for the sample
+reports (restricted to the PageSpeed Insights API only).
 
 ## Repo layout
 
@@ -43,16 +51,16 @@ secret.
 
 Run these from the repo root:
 
-| Command          | What it does                                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`       | Starts the demo site. Run `pnpm build` and `pnpm reports` first.                                        |
-| `pnpm reports`   | Runs Lighthouse on the demo websites to make the sample reports. Needs Google Chrome, or `CHROME_PATH`. |
-| `pnpm build`     | Builds the package with tsdown.                                                                         |
-| `pnpm test`      | Runs the tests in Chromium (Vitest browser mode) and the server tests.                                  |
-| `pnpm lint`      | Runs Oxlint and checks formatting with oxfmt.                                                           |
-| `pnpm format`    | Formats the code and applies lint fixes.                                                                |
-| `pnpm typecheck` | Type checks all projects.                                                                               |
-| `pnpm check`     | Runs everything that CI runs.                                                                           |
+| Command          | What it does                                                                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`       | Starts the demo site. Run `pnpm build` and `pnpm reports` first.                                                                                   |
+| `pnpm reports`   | Runs PageSpeed Insights on the demo websites and screenshots them, to make the sample reports. Needs `pnpm exec playwright install chromium` once. |
+| `pnpm build`     | Builds the package with tsdown.                                                                                                                    |
+| `pnpm test`      | Runs the tests in Chromium (Vitest browser mode) and the server tests.                                                                             |
+| `pnpm lint`      | Runs Oxlint and checks formatting with oxfmt.                                                                                                      |
+| `pnpm format`    | Formats the code and applies lint fixes.                                                                                                           |
+| `pnpm typecheck` | Type checks all projects.                                                                                                                          |
+| `pnpm check`     | Runs everything that CI runs.                                                                                                                      |
 
 ## Pull requests
 
