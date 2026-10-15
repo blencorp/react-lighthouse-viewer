@@ -6,6 +6,8 @@ renderer changes, see the [Lighthouse releases](https://github.com/GoogleChrome/
 
 ## Unreleased
 
+## 13.5.4
+
 - **Save as HTML** is in the tools menu. It saves one HTML file that works offline, the same as
   `lighthouse --output=html` writes. The code for the file loads only when the user saves.
 - Reports from Lighthouse 12.5 and older show their Performance audits again. The renderer lists
