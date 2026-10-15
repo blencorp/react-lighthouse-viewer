@@ -38,6 +38,7 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
       // React calls the ref with null when an earlier call threw before it returned its cleanup.
       // Returning here lets the error boundary show the renderer's own error.
       if (container === null) return undefined;
+      const prepared = withInsightsGroup(resolved);
       const rendererOptions: AllRendererOptions = {
         disableDarkMode,
         disableFireworks,
@@ -48,10 +49,14 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
         getStandaloneReportHTML,
         onPageAnchorRendered,
         onPrintOverride,
-        onSaveFileOverride,
+        // The renderer saves files only from the top bar.
+        onSaveFileOverride: omitTopbar
+          ? onSaveFileOverride
+          : (blob, filename) =>
+              saveFile(blob, filename, { resolved, prepared, onSaveFileOverride }),
         onViewTrace,
       };
-      container.replaceChildren(renderReport(withInsightsGroup(resolved), rendererOptions));
+      container.replaceChildren(renderReport(prepared, rendererOptions));
       return () => container.replaceChildren();
     },
     [
@@ -88,4 +93,35 @@ export function ReportContainer({ load, options = {} }: ReportContainerProps) {
 function withInsightsGroup(report: LighthouseReport): LighthouseReport {
   if (!report.categories['performance'] || report.categoryGroups?.['insights']) return report;
   return { ...report, categoryGroups: { ...report.categoryGroups, insights: { title: '' } } };
+}
+
+async function saveFile(
+  blob: Blob,
+  filename: string,
+  {
+    resolved,
+    prepared,
+    onSaveFileOverride,
+  }: {
+    resolved: LighthouseReport;
+    prepared: LighthouseReport;
+    onSaveFileOverride: RendererOptions['onSaveFileOverride'];
+  },
+) {
+  let file = blob;
+  // The renderer saves the report that it rendered. The JSON file keeps the report as the app
+  // passed it, without the added insights group.
+  if (blob.type === 'application/json' && prepared !== resolved) {
+    file = new Blob([JSON.stringify(resolved, null, 2)], { type: blob.type });
+  }
+  if (onSaveFileOverride) return onSaveFileOverride(file, filename);
+  // The same download as the renderer's own.
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = URL.createObjectURL(file);
+  // Firefox downloads only from a link that is in the document.
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 500);
 }

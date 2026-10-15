@@ -172,6 +172,34 @@ describe('LighthouseViewer', () => {
     expect(screen.container.querySelector('.lh-topbar')).toBeNull();
   });
 
+  test('saves an old report as JSON without the group that the component adds', async () => {
+    const saved = Promise.withResolvers<string>();
+    const screen = await render(
+      <LighthouseViewer
+        report={report3}
+        options={{ onSaveFileOverride: async (blob) => saved.resolve(await blob.text()) }}
+      />,
+    );
+    await screen.getByRole('button', { name: 'Toggle report tools menu' }).click();
+    await screen.getByRole('menuitem', { name: 'Save as JSON' }).click();
+
+    expect(JSON.parse(await saved.promise)).toEqual(report3);
+  });
+
+  test('downloads the JSON file when there is no onSaveFileOverride', async () => {
+    const downloads: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloads.push(this.download);
+    });
+    const screen = await render(<LighthouseViewer report={report3} />);
+    await screen.getByRole('button', { name: 'Toggle report tools menu' }).click();
+    await screen.getByRole('menuitem', { name: 'Save as JSON' }).click();
+
+    await expect.poll(() => downloads).toEqual([expect.stringMatching(/\.json$/)]);
+  });
+
   test('shows the fallback while a report promise loads, then the report', async () => {
     const { promise, resolve } = Promise.withResolvers<LighthouseReport>();
     const screen = await render(
