@@ -6,6 +6,10 @@ renderer changes, see the [Lighthouse releases](https://github.com/GoogleChrome/
 
 ## Unreleased
 
+## 13.6.0
+
+- Bundle Lighthouse 13.6.0.
+
 ## 13.5.4
 
 - **Save as HTML** is in the tools menu. It saves one HTML file that works offline, the same as

@@ -1,6 +1,6 @@
 {
   "name": "@blen/react-lighthouse-viewer",
-  "version": "13.5.4",
+  "version": "13.6.0",
   "description": "Show Lighthouse reports in React: analyze a website, load a saved report, or pass a report object. Uses the official Lighthouse report renderer.",
   "keywords": [
     "lighthouse",
@@ -52,7 +52,7 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
     "@vitest/browser-playwright": "5.0.5",
-    "lighthouse": "13.5.0",
+    "lighthouse": "13.6.0",
     "playwright": "1.64.1",
     "publint": "0.3.25",
     "react": "19.3.1",
