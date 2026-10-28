@@ -4,7 +4,7 @@
 //
 // The package's major.minor always equals the bundled Lighthouse's major.minor. The patch number
 // is ours, so a component fix can ship without waiting for Lighthouse (see README, "Versioning").
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const packageDir = new URL('../packages/react-lighthouse-viewer/', import.meta.url);
@@ -66,6 +66,3 @@ writeFileSync(
 );
 
 console.log(`Prepared ${version} with Lighthouse ${lighthouse}.`);
-if (process.env.GITHUB_OUTPUT) {
-  appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\nlighthouse=${lighthouse}\n`);
-}

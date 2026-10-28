@@ -1,5 +1,9 @@
 name: Set up
 description: Install pnpm, Node.js and the workspace dependencies.
+inputs:
+  cache:
+    description: The setup-node package manager cache. An empty value turns the cache off.
+    default: pnpm
 runs:
   using: composite
   steps:
@@ -8,6 +12,6 @@ runs:
       with:
         node-version-file: .nvmrc
         check-latest: true
-        cache: pnpm
+        cache: ${{ inputs.cache }}
     - run: pnpm install --frozen-lockfile
       shell: bash

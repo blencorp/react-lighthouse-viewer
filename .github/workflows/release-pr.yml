@@ -17,18 +17,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # This job runs the new Lighthouse release, which skips the one-day npm wait, so it gets no
+  # write token. It hands its changes to the pull-request job as a patch.
   prepare:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+    outputs:
+      # Set before any new code runs. Later step outputs could come from the new release.
+      prepare: ${{ steps.lighthouse.outputs.prepare }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The job runs new Lighthouse code, so no write token stays in the git config.
-          # create-pull-request pushes with its own token input.
           persist-credentials: false
       - uses: ./.github/actions/setup
+        with:
+          # Other workflows restore this cache, so a job that runs the new release must not save one.
+          cache: ''
       - id: lighthouse
         env:
           EVENT: ${{ github.event_name }}
@@ -41,8 +44,7 @@ jobs:
           else
             echo "Already on Lighthouse $latest."
           fi
-      - id: release
-        name: Prepare the release
+      - name: Prepare the release
         if: steps.lighthouse.outputs.prepare
         env:
           LATEST: ${{ steps.lighthouse.outputs.latest }}
@@ -52,8 +54,60 @@ jobs:
         run: |
           pnpm --filter @blen/react-lighthouse-viewer exec playwright install --with-deps chromium
           pnpm check
-      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      - name: Save the changes
         if: steps.lighthouse.outputs.prepare
+        run: git diff --binary > "$RUNNER_TEMP/release.patch"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.lighthouse.outputs.prepare
+        with:
+          name: release-patch
+          path: ${{ runner.temp }}/release.patch
+          retention-days: 1
+
+  # Runs no installed packages: it applies the patch and opens the pull request.
+  pull-request:
+    needs: prepare
+    if: needs.prepare.outputs.prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # create-pull-request pushes with its own token input.
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-patch
+          path: ${{ runner.temp }}
+      - id: release
+        name: Apply the changes
+        run: |
+          git apply "$RUNNER_TEMP/release.patch"
+          # A release changes only these files. Anything else means the prepare job misbehaved.
+          unexpected=$(git status --porcelain --untracked-files=all | cut -c4- | grep -vxF \
+            -e CHANGELOG.md \
+            -e pnpm-lock.yaml \
+            -e packages/react-lighthouse-viewer/package.json \
+            -e packages/react-lighthouse-viewer/test/fixtures/lh-latest.json || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::The release patch changes unexpected files:"
+            echo "$unexpected"
+            exit 1
+          fi
+          # Read the versions from the patched files, which the pull request shows to reviewers.
+          version=$(node -p "require('./packages/react-lighthouse-viewer/package.json').version")
+          lighthouse=$(node -p "require('./packages/react-lighthouse-viewer/package.json').devDependencies.lighthouse")
+          for v in "$version" "$lighthouse"; do
+            if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::The release patch sets an invalid version: $v"
+              exit 1
+            fi
+          done
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "lighthouse=$lighthouse" >> "$GITHUB_OUTPUT"
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           branch: release/v${{ steps.release.outputs.version }}
           commit-message: Release ${{ steps.release.outputs.version }}
