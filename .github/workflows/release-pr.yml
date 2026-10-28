@@ -22,13 +22,16 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.release.outputs.version }}
-      lighthouse: ${{ steps.release.outputs.lighthouse }}
+      # Set before any new code runs. Later step outputs could come from the new release.
+      prepare: ${{ steps.lighthouse.outputs.prepare }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+        with:
+          # Other workflows restore this cache, so a job that runs the new release must not save one.
+          cache: ''
       - id: lighthouse
         env:
           EVENT: ${{ github.event_name }}
@@ -41,8 +44,7 @@ jobs:
           else
             echo "Already on Lighthouse $latest."
           fi
-      - id: release
-        name: Prepare the release
+      - name: Prepare the release
         if: steps.lighthouse.outputs.prepare
         env:
           LATEST: ${{ steps.lighthouse.outputs.latest }}
@@ -65,7 +67,7 @@ jobs:
   # Runs no installed packages: it applies the patch and opens the pull request.
   pull-request:
     needs: prepare
-    if: needs.prepare.outputs.version
+    if: needs.prepare.outputs.prepare
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -79,7 +81,8 @@ jobs:
         with:
           name: release-patch
           path: ${{ runner.temp }}
-      - name: Apply the changes
+      - id: release
+        name: Apply the changes
         run: |
           git apply "$RUNNER_TEMP/release.patch"
           # A release changes only these files. Anything else means the prepare job misbehaved.
@@ -93,19 +96,30 @@ jobs:
             echo "$unexpected"
             exit 1
           fi
+          # Read the versions from the patched files, which the pull request shows to reviewers.
+          version=$(node -p "require('./packages/react-lighthouse-viewer/package.json').version")
+          lighthouse=$(node -p "require('./packages/react-lighthouse-viewer/package.json').devDependencies.lighthouse")
+          for v in "$version" "$lighthouse"; do
+            if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::The release patch sets an invalid version: $v"
+              exit 1
+            fi
+          done
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "lighthouse=$lighthouse" >> "$GITHUB_OUTPUT"
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          branch: release/v${{ needs.prepare.outputs.version }}
-          commit-message: Release ${{ needs.prepare.outputs.version }}
-          title: Release ${{ needs.prepare.outputs.version }}
+          branch: release/v${{ steps.release.outputs.version }}
+          commit-message: Release ${{ steps.release.outputs.version }}
+          title: Release ${{ steps.release.outputs.version }}
           # A pull request opened with the default token starts no CI runs. A maintainer marks it
           # ready for review, which runs CI as a required check.
           draft: always-true
           body: |
-            Prepares `@blen/react-lighthouse-viewer@${{ needs.prepare.outputs.version }}`, which bundles the [Lighthouse ${{ needs.prepare.outputs.lighthouse }}](https://github.com/GoogleChrome/lighthouse/releases/tag/v${{ needs.prepare.outputs.lighthouse }}) report renderer.
+            Prepares `@blen/react-lighthouse-viewer@${{ steps.release.outputs.version }}`, which bundles the [Lighthouse ${{ steps.release.outputs.lighthouse }}](https://github.com/GoogleChrome/lighthouse/releases/tag/v${{ steps.release.outputs.lighthouse }}) report renderer.
 
-            - Sets the package version to ${{ needs.prepare.outputs.version }}.
-            - Moves the changelog's "Unreleased" changes under ${{ needs.prepare.outputs.version }}.
+            - Sets the package version to ${{ steps.release.outputs.version }}.
+            - Moves the changelog's "Unreleased" changes under ${{ steps.release.outputs.version }}.
             - When Lighthouse changed: updates it and regenerates the latest sample report.
 
-            `pnpm check` passed in the workflow run. Click **Ready for review** to run CI here. Merging this pull request publishes ${{ needs.prepare.outputs.version }} to npm.
+            `pnpm check` passed in the workflow run. Click **Ready for review** to run CI here. Merging this pull request publishes ${{ steps.release.outputs.version }} to npm.

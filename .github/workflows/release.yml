@@ -60,6 +60,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+        with:
+          # This job can publish to npm, so it does not restore a cache that other jobs can write.
+          cache: ''
       - run: pnpm build
       - name: Publish to npm
         working-directory: packages/react-lighthouse-viewer
