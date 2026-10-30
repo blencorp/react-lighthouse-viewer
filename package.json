@@ -13,9 +13,9 @@
     "reports": "node scripts/generate-sample-reports.ts"
   },
   "devDependencies": {
-    "oxfmt": "0.73.0",
-    "oxlint": "1.88.0",
-    "oxlint-tsgolint": "7.0.2004",
+    "oxfmt": "0.74.0",
+    "oxlint": "1.89.0",
+    "oxlint-tsgolint": "7.0.2005",
     "playwright": "1.64.1"
   },
   "engines": {
